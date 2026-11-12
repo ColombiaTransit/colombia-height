@@ -1,0 +1,7 @@
+output/
+*.tif
+*.tiff
+*.mbtiles
+*.pmtiles
+__pycache__/
+*.pyc

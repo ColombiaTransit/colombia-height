@@ -1,0 +1,57 @@
+name: Build Medellin Terrain RGB Pilot
+
+on:
+  workflow_dispatch:
+    inputs:
+      max_zoom:
+        description: 'Highest zoom level (9-13)'
+        required: true
+        default: '12'
+        type: choice
+        options:
+          - '11'
+          - '12'
+          - '13'
+
+permissions:
+  contents: read
+
+jobs:
+  terrain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install raster and geometry dependencies
+        run: python -m pip install -r requirements-terrain.txt
+      - name: Initial disk availability
+        run: df -h .
+      - name: Generate terrain RGB pilot from Copernicus GLO-30
+        run: python scripts/medellin_terrain.py --output output/medellin --min-zoom 9 --max-zoom ${{ inputs.max_zoom }}
+      - name: Validate SQLite content and show footprint
+        run: |
+          python - <<'PY'
+          import json, sqlite3
+          from pathlib import Path
+          path=Path("output/medellin/medellin-terrain-rgb.mbtiles")
+          report=json.loads(Path("output/medellin/medellin-terrain-report.json").read_text())
+          with sqlite3.connect(path) as db:
+              assert db.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
+              assert db.execute("SELECT value FROM metadata WHERE name='format'").fetchone()[0] == "png"
+              assert db.execute("SELECT COUNT(*) FROM tiles").fetchone()[0] == report["tiles_created"]
+          print(json.dumps(report, indent=2))
+          PY
+          df -h .
+      - name: Upload compact output (without source GeoTIFF)
+        uses: actions/upload-artifact@v4
+        with:
+          name: medellin-terrain-rgb-pilot
+          path: |
+            output/medellin/medellin-terrain-rgb.mbtiles
+            output/medellin/medellin-terrain-report.json
+          if-no-files-found: error
+          retention-days: 7

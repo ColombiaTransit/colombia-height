@@ -1,0 +1,56 @@
+name: Antioquia Terrain RGB Multi-source Pilot
+
+on:
+  workflow_dispatch:
+    inputs:
+      max_zoom:
+        description: 'Highest zoom level'
+        type: choice
+        options: ['12', '13']
+        default: '13'
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  antioquia:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install dependencies
+        run: python -m pip install -r requirements-terrain.txt
+      - name: Record initial disk
+        run: df -h .
+      - name: Generate multi-source test and diagnose tile edges
+        run: python scripts/antioquia_pilot.py --region antioquia --min-zoom 11 --max-zoom ${{ inputs.max_zoom }} --output output/antioquia
+      - name: Validate output and report size
+        run: |
+          python - <<'PY'
+          import json, sqlite3
+          from pathlib import Path
+          folder=Path("output/antioquia")
+          report=json.loads((folder/"antioquia-validation.json").read_text())
+          with sqlite3.connect(folder/"medellin-terrain-rgb.mbtiles") as db:
+              assert db.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
+              assert db.execute("SELECT COUNT(*) FROM tiles").fetchone()[0] == report["tiles_created"]
+          assert len(report["source_tiles"]) > 1, "Expected a multi-source DEM pilot"
+          assert report["validation"]["sample_difference_m"] < 250
+          print(json.dumps(report, indent=2))
+          PY
+          df -h .
+      - name: Upload output without source GeoTIFF
+        uses: actions/upload-artifact@v4
+        with:
+          name: antioquia-terrain-rgb-pilot
+          path: |
+            output/antioquia/medellin-terrain-rgb.mbtiles
+            output/antioquia/medellin-terrain-report.json
+            output/antioquia/antioquia-validation.json
+          retention-days: 7
+          if-no-files-found: error

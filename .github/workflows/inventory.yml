@@ -1,0 +1,30 @@
+name: Inventory Colombia DEM
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Inventory publicly available Copernicus GLO-30 tiles
+        run: python scripts/inventory.py --output output --workers 8
+      - name: Upload inventory manifests
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: colombia-dem-inventory
+          path: output/
+          if-no-files-found: warn
+          retention-days: 30

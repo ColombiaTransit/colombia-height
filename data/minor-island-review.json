@@ -1,0 +1,103 @@
+{
+  "version": 1,
+  "source_run": "https://github.com/ColombiaTransit/colombia-height/actions/runs/43195302813",
+  "description": "Eight Natural Earth 1:10m minor-island polygons nominated near current island probes. Existing 137-tile source manifest contains all their source degree cells; land existence, actual DEM values and official territorial attribution remain unverified.",
+  "candidates": [
+    {
+      "id": "ne_minor_01",
+      "center_lon": -75.872936,
+      "center_lat": 9.78167,
+      "near_registry_id": "san_bernardo",
+      "expected_cog": "Copernicus_DSM_COG_10_N09_00_W076_00_DEM",
+      "in_original_137_manifest": true,
+      "source_file_exists": true,
+      "actual_dem_validity": "not_checked",
+      "official_territorial_review": "pending",
+      "disposition": "source_cell_already_included_no_extra_download"
+    },
+    {
+      "id": "ne_minor_02",
+      "center_lon": -75.842936,
+      "center_lat": 9.794722,
+      "near_registry_id": "san_bernardo",
+      "expected_cog": "Copernicus_DSM_COG_10_N09_00_W076_00_DEM",
+      "in_original_137_manifest": true,
+      "source_file_exists": true,
+      "actual_dem_validity": "not_checked",
+      "official_territorial_review": "pending",
+      "disposition": "source_cell_already_included_no_extra_download"
+    },
+    {
+      "id": "ne_minor_03",
+      "center_lon": -79.845694,
+      "center_lat": 15.789923,
+      "near_registry_id": "cayo_serranilla",
+      "expected_cog": "Copernicus_DSM_COG_10_N15_00_W080_00_DEM",
+      "in_original_137_manifest": true,
+      "source_file_exists": true,
+      "actual_dem_validity": "not_checked",
+      "official_territorial_review": "pending",
+      "disposition": "source_cell_already_included_no_extra_download"
+    },
+    {
+      "id": "ne_minor_04",
+      "center_lon": -79.987938,
+      "center_lat": 15.795579,
+      "near_registry_id": "cayo_serranilla",
+      "expected_cog": "Copernicus_DSM_COG_10_N15_00_W080_00_DEM",
+      "in_original_137_manifest": true,
+      "source_file_exists": true,
+      "actual_dem_validity": "not_checked",
+      "official_territorial_review": "pending",
+      "disposition": "source_cell_already_included_no_extra_download"
+    },
+    {
+      "id": "ne_minor_05",
+      "center_lon": -79.983871,
+      "center_lat": 15.799018,
+      "near_registry_id": "cayo_serranilla",
+      "expected_cog": "Copernicus_DSM_COG_10_N15_00_W080_00_DEM",
+      "in_original_137_manifest": true,
+      "source_file_exists": true,
+      "actual_dem_validity": "not_checked",
+      "official_territorial_review": "pending",
+      "disposition": "source_cell_already_included_no_extra_download"
+    },
+    {
+      "id": "ne_minor_06",
+      "center_lon": -79.774548,
+      "center_lat": 15.855373,
+      "near_registry_id": "cayo_serranilla",
+      "expected_cog": "Copernicus_DSM_COG_10_N15_00_W080_00_DEM",
+      "in_original_137_manifest": true,
+      "source_file_exists": true,
+      "actual_dem_validity": "not_checked",
+      "official_territorial_review": "pending",
+      "disposition": "source_cell_already_included_no_extra_download"
+    },
+    {
+      "id": "ne_minor_07",
+      "center_lon": -79.745623,
+      "center_lat": 15.856248,
+      "near_registry_id": "cayo_serranilla",
+      "expected_cog": "Copernicus_DSM_COG_10_N15_00_W080_00_DEM",
+      "in_original_137_manifest": true,
+      "source_file_exists": true,
+      "actual_dem_validity": "not_checked",
+      "official_territorial_review": "pending",
+      "disposition": "source_cell_already_included_no_extra_download"
+    },
+    {
+      "id": "ne_minor_08",
+      "center_lon": -78.637788,
+      "center_lat": 15.865648,
+      "near_registry_id": "cayo_bajo_nuevo",
+      "expected_cog": "Copernicus_DSM_COG_10_N15_00_W079_00_DEM",
+      "in_original_137_manifest": true,
+      "source_file_exists": true,
+      "actual_dem_validity": "not_checked",
+      "official_territorial_review": "pending",
+      "disposition": "source_cell_already_included_no_extra_download"
+    }
+  ]
+}

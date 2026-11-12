@@ -1,0 +1,78 @@
+name: Coastal and Island Terrain-RGB Pilot
+
+on:
+  workflow_dispatch:
+    inputs:
+      zoom_max:
+        description: 'Highest pilot zoom (11 or 12; start with 12)'
+        type: choice
+        options:
+          - '12'
+          - '11'
+        default: '12'
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  pilot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install raster and geographic tools
+        run: python -m pip install -r requirements-terrain.txt -r requirements-island-inventory.txt
+      - name: Full regression suite, including missing-pixel policy
+        run: python -m unittest discover -s tests -v
+      - name: Available disk before
+        run: df -h .
+      - name: Strict terrain pilot — Cartagena, Buenaventura, San Andrés
+        run: python scripts/coastal_terrain_pilot.py --regions all --min-zoom 11 --max-zoom ${{ inputs.zoom_max }} --output output/coastal-terrain
+      - name: Validate every emitted Terrain-RGB tile is a readable PNG
+        run: |
+          python - <<'PY'
+          import io
+          import json
+          import sqlite3
+          from pathlib import Path
+          from PIL import Image
+          root=Path("output/coastal-terrain")
+          result=json.loads((root/"summary.json").read_text())
+          assert len(result["regions"])==3
+          for item in result["regions"]:
+              name=item["region"]
+              file=root/name/(name+"-coastal-pilot.mbtiles")
+              with sqlite3.connect(file) as db:
+                  tiles=list(db.execute("SELECT zoom_level,tile_column,tile_row,tile_data FROM tiles"))
+                  assert len(tiles)==sum(item["tile_counts"].values()),name
+                  assert len(tiles)>0,name
+                  for z,x,y,png in tiles:
+                      with Image.open(io.BytesIO(png)) as image:
+                          assert image.format=="PNG",(name,z,x,y)
+                          assert image.size==(256,256),(name,z,x,y)
+              assert sum(item["pixels"][key] for key in
+                  ("valid_reference_land","valid_outside_reference_land",
+                   "missing_reference_land","missing_outside_reference_land"))==item["pixels"]["total_pixels"]
+              print(name,"complete=",len(tiles),
+                    "skipped_incomplete=",sum(item["skipped_incomplete_tile_counts"].values()),
+                    "missing_reference_land=",item["pixels"]["missing_reference_land"])
+          PY
+      - name: Available disk after
+        if: always()
+        run: df -h .
+      - name: Upload temporary test outputs only
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: colombia-coastal-terrain-pilot
+          path: |
+            output/coastal-terrain/summary.json
+            output/coastal-terrain/*/report.json
+            output/coastal-terrain/*/*.mbtiles
+          retention-days: 1
+          if-no-files-found: error

@@ -1,0 +1,66 @@
+name: Regional Terrain-RGB Seam and Batch Validation
+
+on:
+  workflow_dispatch:
+    inputs:
+      maxzoom:
+        description: Highest zoom for the two-batch test
+        required: true
+        type: choice
+        options: ['13', '12']
+        default: '13'
+
+permissions:
+  contents: read
+
+jobs:
+  seam-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install terrain dependencies
+        run: python -m pip install -r requirements-terrain.txt -r requirements-island-inventory.txt
+      - name: Run regression suite
+        run: python -m unittest discover -s tests -v
+      - name: Disk space before rendering
+        run: df -h .
+      - name: Independently render adjoining batches and verify seam references
+        run: python scripts/regional_seam_pilot.py --output output/antioquia-seams --maxzoom ${{ inputs.maxzoom }}
+      - name: Verify merge and report acceptance
+        run: |
+          python - <<'PY'
+          import json
+          import sqlite3
+          from pathlib import Path
+          root=Path("output/antioquia-seams")
+          report=json.loads((root/"seam-validation-report.json").read_text())
+          expected=sum(sum(batch["counts"].values()) for batch in report["batches"])
+          assert report["merged_tile_count"]==expected
+          assert report["seams"]["all_seams_match_independent_reference"]
+          assert report["seams"]["vertical_cross_batch_seam_count"]>0
+          with sqlite3.connect(root/"antioquia-seams-merged.mbtiles") as db:
+              assert db.execute("SELECT COUNT(*) FROM tiles").fetchone()[0]==expected
+              assert db.execute("PRAGMA integrity_check").fetchone()[0]=="ok"
+          print("Unique merged tiles:",expected)
+          print("Verified cross-batch vertical seams:",report["seams"]["vertical_cross_batch_seam_count"])
+          for z,entries in report["seams"]["seams_by_zoom"].items():
+              print("zoom",z,"seams",len(entries),
+                    "max reference error (m)",max(e["max_abs_reference_error_m"] for e in entries),
+                    "max adjacent sample gradient (m)",max(e["max_adjacent_sample_height_delta_m"] for e in entries))
+          PY
+      - name: Disk space after
+        if: always()
+        run: df -h .
+      - name: Upload report only (MBTiles removed with runner)
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: colombia-antioquia-seam-validation
+          path: output/antioquia-seams/seam-validation-report.json
+          retention-days: 1
+          if-no-files-found: error

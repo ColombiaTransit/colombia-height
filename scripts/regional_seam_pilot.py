@@ -9,6 +9,7 @@ No permanent release is created.
 import argparse
 import io
 import json
+import math
 import sqlite3
 from collections import defaultdict
 from pathlib import Path
@@ -40,6 +41,18 @@ def tile_list(xs, ys, zoom):
     return [(zoom,x,y)
             for yy in ys for y in range(yy*factor,(yy+1)*factor)
             for xx in xs for x in range(xx*factor,(xx+1)*factor)]
+
+def global_aligned_mosaic_bounds(bbox):
+    """Anchor geographic mosaic sampling to integer 1-arcsecond parallels.
+
+    Independent batches otherwise use different subpixel sample origins,
+    producing artificial cross-batch seam discrepancies.
+    """
+    step=3600
+    return (math.floor(bbox[0]*step)/step,
+            math.floor(bbox[1]*step)/step,
+            math.ceil(bbox[2]*step)/step,
+            math.ceil(bbox[3]*step)/step)
 
 def warp_tile(dem, src_transform, tile, width=TILE_SIZE, height=TILE_SIZE, region_bounds=None):
     z,x,y=tile
@@ -73,7 +86,7 @@ def render_batch(output, name, minzoom, maxzoom):
     entries,paths=prepare_sources(bbox,output/"source-cache")
     pad=2/3600
     padded=(bbox[0]-pad,bbox[1]-pad,bbox[2]+pad,bbox[3]+pad)
-    dem,tform=build_raster(paths,padded)
+    dem,tform=build_raster(paths,global_aligned_mosaic_bounds(padded))
     path=root/(name+".mbtiles")
     path.unlink(missing_ok=True)
     db=sqlite3.connect(path)

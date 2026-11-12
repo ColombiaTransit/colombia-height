@@ -1,0 +1,39 @@
+name: Validate Strict Tile-Aligned Terrain
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install dependencies
+        run: python -m pip install -r requirements-terrain.txt
+      - name: Synthetic boundary and no-data unit tests
+        run: python -m unittest discover -s tests -v
+      - name: Disk before processing
+        run: df -h .
+      - name: Strict tile-aligned Antioquia terrain test
+        run: python scripts/strict_terrain.py --region antioquia --min-zoom 11 --max-zoom 13 --output output/strict
+      - name: Disk after processing
+        if: always()
+        run: df -h .
+      - name: Upload validated result
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: antioquia-terrain-strict
+          path: |
+            output/strict/antioquia-terrain-strict.mbtiles
+            output/strict/terrain-strict-report.json
+          retention-days: 7
+          if-no-files-found: error

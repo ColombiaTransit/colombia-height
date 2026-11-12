@@ -27,4 +27,4 @@ jobs:
           name: colombia-dem-inventory
           path: output/
           if-no-files-found: warn
-          retention-days: 30
+          retention-days: 1

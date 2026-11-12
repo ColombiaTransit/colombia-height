@@ -62,5 +62,5 @@ jobs:
         with:
           name: colombia-coast-island-audit-${{ inputs.region }}
           path: output/coastal-audit/coastal-island-audit.json
-          retention-days: 7
+          retention-days: 1
           if-no-files-found: error

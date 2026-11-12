@@ -21,10 +21,13 @@ two batches (8 z11, 32 z12, 128 z13), including a 2-tile, 4-tile and
 - Any incomplete Copernicus source pixel fails immediately; no fabricated
   sea level or -10,000m values can be encoded.
 - Merge uses SQLite z/x/TMS-y primary keys; duplicate ownership is an error.
-- A *third, independent union-area reference mosaic* renders each shared
-  tile pair as one 512 × 256 output. The generated batch tiles are decoded
-  from Terrain-RGB and compared pixel-for-pixel to the reference, with a
-  0.16m limit allowing 0.1m encoding quantization and floating-point jitter.
+- A *third, independent union-area reference mosaic* renders each
+  256 × 256 tile on the **identical pixel grid** used by its regional
+  batch. The generated batch tiles are decoded from Terrain-RGB and
+  compared pixel-for-pixel to the reference, with a 0.16m limit allowing
+  0.1m encoding quantization and floating-point jitter. A single
+  512 × 256 GDAL warp must not be used as the reference, because its
+  warp approximation grid differs from two 256 × 256 reprojects.
 - Natural terrain gradients across the two adjacent pixel centers are
   reported separately; they are **not** required to equal zero.
 - The resulting MBTiles must pass SQLite integrity and exact tile counts.

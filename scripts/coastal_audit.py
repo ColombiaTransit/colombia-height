@@ -94,7 +94,14 @@ def grid_land_mask(transform,rows,cols,land_geometry):
     # Sample at the center of each grid cell.
     r,c=np.indices((rows,cols))
     x,y=xy(transform,r,c,offset="center")
-    return contains_xy(land_geometry,np.asarray(x),np.asarray(y))
+    # rasterio.xy flattens array-valued row/column indices into coordinate
+    # vectors; reconstruct the original (rows, cols) mask shape explicitly.
+    x=np.asarray(x).reshape((rows,cols))
+    y=np.asarray(y).reshape((rows,cols))
+    mask=np.asarray(contains_xy(land_geometry,x,y),dtype=bool)
+    if mask.shape != (rows,cols):
+        raise RuntimeError(f"Unexpected land mask shape {mask.shape}, expected {(rows,cols)}")
+    return mask
 
 def probe_samples(source_paths,points):
     """Return actual native DEM samples at nominated points; no interpolation."""

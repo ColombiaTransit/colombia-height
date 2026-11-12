@@ -54,4 +54,4 @@ jobs:
             output/medellin/medellin-terrain-rgb.mbtiles
             output/medellin/medellin-terrain-report.json
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 1

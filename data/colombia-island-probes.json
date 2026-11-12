@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "notes": "Approximate sampling centers, not authoritative territorial polygons or certified land positions. Some banks/cays may be submerged or mapped differently. Verify coordinates and jurisdiction with official Colombian IGAC data before final publication.",
+  "notes": "Approximate sampling centers, not authoritative territorial polygons or certified land positions. Some banks/cays may be submerged or mapped differently. Verify coordinates and jurisdiction with official Colombian IGAC data before final publication. Quitasueño Bank is deliberately excluded from this project's scope by maintainer decision; do not use the inventory as a sovereignty determination.",
   "locations": [
     {
       "id": "san_andres",
@@ -91,13 +91,6 @@
       "name": "Roncador Bank",
       "lon": -80.05,
       "lat": 13.58,
-      "kind": "bank_or_cay_sample"
-    },
-    {
-      "id": "cayo_quitasueno",
-      "name": "Quitasueño Bank",
-      "lon": -81.17,
-      "lat": 14.4,
       "kind": "bank_or_cay_sample"
     },
     {

@@ -1,0 +1,132 @@
+{
+  "version": 1,
+  "notes": "Approximate sampling centers, not authoritative territorial polygons or certified land positions. Some banks/cays may be submerged or mapped differently. Verify coordinates and jurisdiction with official Colombian IGAC data before final publication.",
+  "locations": [
+    {
+      "id": "san_andres",
+      "name": "San Andrés",
+      "lon": -81.7,
+      "lat": 12.57,
+      "kind": "island"
+    },
+    {
+      "id": "providencia",
+      "name": "Providencia",
+      "lon": -81.37,
+      "lat": 13.35,
+      "kind": "island"
+    },
+    {
+      "id": "santa_catalina",
+      "name": "Santa Catalina",
+      "lon": -81.375,
+      "lat": 13.38,
+      "kind": "island"
+    },
+    {
+      "id": "malpelo",
+      "name": "Malpelo",
+      "lon": -81.606,
+      "lat": 4.005,
+      "kind": "island"
+    },
+    {
+      "id": "gorgona",
+      "name": "Gorgona",
+      "lon": -78.18,
+      "lat": 2.97,
+      "kind": "island"
+    },
+    {
+      "id": "gorgonilla",
+      "name": "Gorgonilla",
+      "lon": -78.19,
+      "lat": 2.93,
+      "kind": "island"
+    },
+    {
+      "id": "isla_fuerte",
+      "name": "Isla Fuerte",
+      "lon": -76.18,
+      "lat": 9.38,
+      "kind": "island"
+    },
+    {
+      "id": "islas_rosario",
+      "name": "Islas del Rosario",
+      "lon": -75.74,
+      "lat": 10.18,
+      "kind": "archipelago_sample"
+    },
+    {
+      "id": "san_bernardo",
+      "name": "Archipiélago de San Bernardo",
+      "lon": -75.95,
+      "lat": 9.78,
+      "kind": "archipelago_sample"
+    },
+    {
+      "id": "isla_tierrabomba",
+      "name": "Tierra Bomba",
+      "lon": -75.56,
+      "lat": 10.34,
+      "kind": "island"
+    },
+    {
+      "id": "isla_baru",
+      "name": "Barú",
+      "lon": -75.66,
+      "lat": 10.21,
+      "kind": "island"
+    },
+    {
+      "id": "cayo_serrana",
+      "name": "Serrana Bank",
+      "lon": -80.34,
+      "lat": 14.28,
+      "kind": "bank_or_cay_sample"
+    },
+    {
+      "id": "cayo_roncador",
+      "name": "Roncador Bank",
+      "lon": -80.05,
+      "lat": 13.58,
+      "kind": "bank_or_cay_sample"
+    },
+    {
+      "id": "cayo_quitasueno",
+      "name": "Quitasueño Bank",
+      "lon": -81.17,
+      "lat": 14.4,
+      "kind": "bank_or_cay_sample"
+    },
+    {
+      "id": "cayo_serranilla",
+      "name": "Serranilla Bank",
+      "lon": -79.84,
+      "lat": 15.83,
+      "kind": "bank_or_cay_sample"
+    },
+    {
+      "id": "cayo_bajo_nuevo",
+      "name": "Bajo Nuevo Bank",
+      "lon": -78.63,
+      "lat": 15.89,
+      "kind": "bank_or_cay_sample"
+    },
+    {
+      "id": "cayo_albuquerque",
+      "name": "Albuquerque Cays",
+      "lon": -81.85,
+      "lat": 12.17,
+      "kind": "bank_or_cay_sample"
+    },
+    {
+      "id": "cayo_bolivar",
+      "name": "Bolívar Cay",
+      "lon": -81.47,
+      "lat": 12.41,
+      "kind": "bank_or_cay_sample"
+    }
+  ]
+}

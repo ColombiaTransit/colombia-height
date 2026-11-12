@@ -112,6 +112,36 @@ def main():
                 existing=previous[tile["name"]]
                 existing["selection_reasons"]+=";island_probe:"+location["id"]
 
+    # Independent small-island discovery within local study windows around
+    # nominated points. These are review candidates, not Colombian territory
+    # assertions. Never auto-add candidate DEM cells to the national manifest.
+    discovered=[]
+    unique_geometries=set()
+    for geom in ne_layers["ne_10m_minor_islands"]:
+        if geom.is_empty:
+            continue
+        center=geom.representative_point()
+        nearby=[loc["id"] for loc in entries
+                if abs(center.x-float(loc["lon"]))<=0.35
+                and abs(center.y-float(loc["lat"]))<=0.35]
+        if not nearby:
+            continue
+        key=(round(center.x,6),round(center.y,6))
+        if key in unique_geometries:
+            continue
+        unique_geometries.add(key)
+        cell=(math.floor(center.y),math.floor(center.x))
+        discovered.append({
+            "center_lon":round(center.x,6),
+            "center_lat":round(center.y,6),
+            "near_registry_locations":nearby,
+            "in_geoboundaries_colombia":bool(country.covers(center)),
+            "copernicus_source_exists":cell in index,
+            "source_tile":index[cell]["name"] if cell in index else None,
+            "requires_official_territorial_review":True,
+        })
+    discovered.sort(key=lambda item:(item["center_lat"],item["center_lon"]))
+
     new_names=set(previous)-original_names
     values=sorted(previous.values(),key=lambda x:(int(x["latitude"]),int(x["longitude"])))
     with (inventory/"colombia_dem_manifest_extended.csv").open("w",newline="",encoding="utf-8") as f:
@@ -135,6 +165,8 @@ def main():
         "missing_probe_ids":[x["id"] for x in missing],
         "registry_points":len(details),
         "registry":details,
+        "natural_earth_minor_island_review_candidates":discovered,
+        "natural_earth_minor_island_review_count":len(discovered),
         "references":{
             "country_boundary":metadata["gjDownloadURL"],
             "natural_earth":NE_SOURCES,

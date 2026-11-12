@@ -35,5 +35,5 @@ jobs:
           path: |
             output/strict/antioquia-terrain-strict.mbtiles
             output/strict/terrain-strict-report.json
-          retention-days: 7
+          retention-days: 1
           if-no-files-found: error

@@ -52,5 +52,5 @@ jobs:
             output/antioquia/medellin-terrain-rgb.mbtiles
             output/antioquia/medellin-terrain-report.json
             output/antioquia/antioquia-validation.json
-          retention-days: 7
+          retention-days: 1
           if-no-files-found: error

@@ -18,6 +18,7 @@ PREFIXES = (
     "antioquia-terrain-rgb-pilot",
     "antioquia-terrain-strict",
     "colombia-coast-island-audit-",
+    "colombia-dem-extended-islands-inventory",
 )
 API = "https://api.github.com"
 

@@ -1,0 +1,66 @@
+name: Audit Colombia Coast and Islands
+
+on:
+  workflow_dispatch:
+    inputs:
+      region:
+        description: 'Sampling region (all downloads seven compact windows)'
+        type: choice
+        required: true
+        default: 'all'
+        options:
+          - all
+          - cartagena
+          - barranquilla
+          - buenaventura
+          - tumaco
+          - san_andres
+          - providencia
+          - malpelo
+
+permissions:
+  contents: read
+
+jobs:
+  coastal-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install dependencies
+        run: python -m pip install -r requirements-terrain.txt
+      - name: Unit tests
+        run: python -m unittest discover -s tests -v
+      - name: Disk space before
+        run: df -h .
+      - name: Inspect Copernicus masks on Caribbean and Pacific coasts and islands
+        run: python scripts/coastal_audit.py --region ${{ inputs.region }} --output output/coastal-audit
+      - name: Display summary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path("output/coastal-audit/coastal-island-audit.json").read_text())
+          for item in r["regions"]:
+              s=item.get("grid_summary",{})
+              print(f"{item['id']}: {item['status']}; sources={item['source_tile_count']}; "
+                    f"missing land samples={s.get('missing_inside_boundary','n/a')}; "
+                    f"absent source cells={len(item['missing_source_cells'])}")
+              for p in item.get("land_probes",[]):
+                  print(f"  probe {p['lon']}, {p['lat']}: {p['status']} {p['height_m']}")
+          PY
+      - name: Disk space after
+        if: always()
+        run: df -h .
+      - name: Upload compact audit (no source DEMs)
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: colombia-coast-island-audit-${{ inputs.region }}
+          path: output/coastal-audit/coastal-island-audit.json
+          retention-days: 7
+          if-no-files-found: error

@@ -3,7 +3,9 @@ import unittest
 from pathlib import Path
 import numpy as np
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"scripts"))
-from coastal_audit import bbox, classify, intersect_cells, REGIONS
+from coastal_audit import bbox, classify, intersect_cells, grid_land_mask, REGIONS
+from rasterio.transform import from_origin
+from shapely.geometry import box
 
 class CoastAuditTests(unittest.TestCase):
     def test_cross_degree_boundaries(self):
@@ -23,6 +25,17 @@ class CoastAuditTests(unittest.TestCase):
         names={r["id"] for r in REGIONS}
         self.assertTrue({"san_andres","providencia","malpelo"}<=names)
         self.assertEqual(len(names),7)
+
+    def test_grid_mask_shape_matches_dem(self):
+        transform=from_origin(-76.0,11.0,0.01,0.01)
+        rows,cols=28,34
+        # Regression: rasterio.xy flattens index arrays, but output mask must
+        # remain two-dimensional to match a sampled DEM window.
+        mask=grid_land_mask(transform,rows,cols,box(-75.9,10.8,-75.7,10.95))
+        self.assertEqual(mask.shape,(rows,cols))
+        self.assertEqual(mask.dtype,np.dtype(bool))
+        self.assertTrue(mask.any())
+        self.assertFalse(mask.all())
 
     def test_bbox_is_not_a_land_mask(self):
         r=next(r for r in REGIONS if r["id"]=="malpelo")

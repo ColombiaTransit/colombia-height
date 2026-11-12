@@ -1,0 +1,55 @@
+name: Extended Colombia DEM and Island Inventory
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install inventory dependencies
+        run: python -m pip install -r requirements-island-inventory.txt
+      - name: Build original Colombia DEM inventory
+        run: python scripts/inventory.py --output output --workers 8
+      - name: Extend sources and inspect independent island geometry
+        run: python scripts/extend_inventory.py --inventory output --islands data/colombia-island-probes.json
+      - name: Check inventory output integrity
+        run: |
+          python - <<'PY'
+          import csv,json
+          from pathlib import Path
+          d=Path("output")
+          report=json.loads((d/"colombia_island_coverage_report.json").read_text())
+          with (d/"colombia_dem_manifest_extended.csv").open(newline="") as f:
+              rows=list(csv.DictReader(f))
+          assert len(rows)==report["extended_unique_tile_count"]
+          assert len({x["name"] for x in rows})==len(rows)
+          assert report["extended_unique_tile_count"]>=report["baseline_inventory_tile_count"]
+          assert report["registry_points"]>=10
+          print("Verified unique sources:",len(rows))
+          for x in report["registry"]:
+              print(x["id"],"COG:",x["copernicus_source_exists"],
+                    "country boundary:",x["in_geoboundaries_colombia"],
+                    "Natural Earth land:",x["in_natural_earth_land"],
+                    "minor islands:",x["in_natural_earth_minor_islands"])
+          PY
+      - name: Upload compact inventory and coverage evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: colombia-dem-extended-islands-inventory
+          path: |
+            output/colombia_dem_manifest.csv
+            output/colombia_dem_manifest_extended.csv
+            output/colombia_dem_summary.json
+            output/colombia_island_coverage_report.json
+          retention-days: 1
+          if-no-files-found: error

@@ -1,0 +1,5 @@
+-r requirements.txt
+rasterio>=1.4,<2
+numpy>=2,<3
+Pillow>=11,<13
+mercantile>=1.2,<2

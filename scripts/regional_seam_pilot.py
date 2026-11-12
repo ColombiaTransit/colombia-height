@@ -151,7 +151,6 @@ def seam_pairs(z):
 
 def check_seams(west,east,dem,tform,minzoom,maxzoom):
     report={}
-    mismatch_count=0
     seam_count=0
     with sqlite3.connect(f"file:{Path(west).resolve()}?mode=ro",uri=True) as wa,sqlite3.connect(f"file:{Path(east).resolve()}?mode=ro",uri=True) as eb:
         for z in range(minzoom,maxzoom+1):
@@ -165,12 +164,16 @@ def check_seams(west,east,dem,tform,minzoom,maxzoom):
                 bb2=mercantile.xy_bounds(bx,by,z)
                 if not np.isclose(bb1.right,bb2.left,atol=1e-6):
                     raise ValueError("Nonadjacent Web Mercator tiles")
-                combo_bounds=(bb1.left,bb1.bottom,bb2.right,bb1.top)
-                reference=warp_tile(dem,tform,a,width=512,height=256,region_bounds=combo_bounds)
-                if np.any(reference==NODATA) or not np.isfinite(reference).all():
+                # Compare each independent 256x256 batch tile against the
+                # reference mosaic on precisely the SAME pixel grid.
+                # A single 512x256 GDAL warp has a different approximation
+                # grid and can introduce ~metre-scale discrepancies on slopes
+                # even if the underlying DEM is perfectly aligned.
+                ref_left=warp_tile(dem,tform,a)
+                ref_right=warp_tile(dem,tform,b)
+                if (not np.isfinite(ref_left).all() or not np.isfinite(ref_right).all()
+                        or np.any(ref_left==NODATA) or np.any(ref_right==NODATA)):
                     raise ValueError("Reference DEM invalid at seam")
-                ref_left=reference[:,:256]
-                ref_right=reference[:,256:]
                 left_error=max_error(left,ref_left)
                 right_error=max_error(right,ref_right)
                 error=max(left_error,right_error)

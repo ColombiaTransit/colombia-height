@@ -71,3 +71,39 @@ Before production: verify official IGAC land/island geometry and
 reference disagreements; resolve missing land DEM; decide the strict
 partial-tile encoding/omission policy; continue systematic source-edge
 QA. Existing valid heights must never be overwritten.
+
+
+## Four-site pilot result — 13 November 2026
+
+The automatic first pilot
+[run 43488453819](https://github.com/ColombiaTransit/colombia-height/actions/runs/43488453819)
+completed successfully (regression tests and all 36 z11 pixel masks).
+Of 36 tiles, **27** have full DEM coverage, **6** partial coverage, and
+**3** no DEM coverage from the 137 selected source COGs.
+
+| Site | Tiles checked | Missing DEM pixels | Missing in land according to at least one reference |
+| --- | ---: | ---: | ---: |
+| Tumaco | 9 | 113,664 | 1,691 |
+| San Andrés | 9 | 0 | 0 |
+| Providencia | 9 | 0 | 0 |
+| Malpelo | 9 | 348,672 | 1,329 |
+| **Total** | **36** | **462,336** | **3,020** |
+
+Of all 462,336 missing DEM pixels, **0** fall in land polygons shared
+by *both* references, **0** in geoBoundaries-only land,
+**3,020** in Natural Earth-only land, and **459,316** outside both
+references (**unknown, not confirmed sea**). This demonstrates why
+a simplified country ADM0 geometry must never be treated as an
+authoritative coastline or as complete for remote islands.
+
+The source-gap detector identified public COGs missing from the selected
+inventory (not downloaded or approved):
+
+- `Copernicus_DSM_COG_10_N01_00_W080_00_DEM` (Tumaco vicinity).
+- `Copernicus_DSM_COG_10_N03_00_W082_00_DEM` (Malpelo vicinity).
+
+These exact named COGs are investigation candidates, **not automatic
+territorial additions**. The missing land numbers are *provisional
+Natural Earth reference pixels*, not confirmed jurisdictional DEM voids.
+A full national land-reference scan and official IGAC polygon review
+are still required; release remains disabled.

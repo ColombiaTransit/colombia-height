@@ -55,3 +55,43 @@ is deliberately not automatic, to protect free GitHub Actions budget.
 
 All artifacts have one-day retention and are removed by the
 existing temporary test-artifact cleanup allowlist.
+
+## Initial pilot results — 13 November 2026
+
+The first 32-shard architecture smoke test
+[run 43422120885](https://github.com/ColombiaTransit/colombia-height/actions/runs/43422120885)
+passed. The source manifest reverified **137 COGs**, and 24 bounded
+sample output tiles in geographic shard 12 at zoom 10 all had full
+native DEM pixel coverage. This is a *sample*, not national coverage.
+
+The subsequent targeted Tumaco check found an important
+**source-selection difference**, first exposed by
+[run 43422421562](https://github.com/ColombiaTransit/colombia-height/actions/runs/43422421562)
+and diagnosed by the passing
+[run 43422773930](https://github.com/ColombiaTransit/colombia-height/actions/runs/43422773930):
+
+| XYZ tile | Native sources used | Valid / 65,536 | Missing |
+| --- | ---: | ---: | ---: |
+| 11/574/1012 in 137-source selected inventory | 2 | 27,648 | **37,888** |
+| Earlier local all-available-source audit | 3 | 42,152 | **23,384** |
+
+The missing **14,504** additional pixels come from a COG present in
+the public Copernicus global catalog but **omitted from the currently
+selected Colombia inventory**:
+`Copernicus_DSM_COG_10_N01_00_W080_00_DEM`.
+
+This source is offshore in the test area; do **not** automatically
+assign it to Colombian territory or add it to the national input
+manifest without an official-scoped coverage decision.
+
+**Classification convention:** full/partial/no coverage means
+coverage from the **137 selected source COGs**, not all Copernicus
+sources worldwide and not a country jurisdiction classification.
+A future inventory-scope check must distinguish absent data within
+a selected source from adjacent *unselected* source COGs, especially
+along the coast.
+
+The full 32-shard workflow is available separately as manual
+`workflow_dispatch` mode `full`. It has not been run by these pilots.
+Its result must reconcile all candidates before national coverage
+counts may be stated.

@@ -125,6 +125,8 @@ class NationalLandCoverageTests(unittest.TestCase):
                     "reference_land_agreement_pixels": 1,
                     "unselected_public_cogs_at_missing_pixels": [],
                     "requires_review": False,
+                    "possible_missing_reference_land": False,
+                    "outside_both_reference_status_unknown": False,
                     **{k: 0 for k in CATEGORIES},
                 }, "full_dem_coverage")
             with patch("national_land_coverage.load_references") as refs, \

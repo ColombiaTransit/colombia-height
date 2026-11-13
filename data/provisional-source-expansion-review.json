@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "purpose": "Read-only evidence register: public Copernicus COGs excluded from the current 137-COG study, pending official coastline/island scope review",
+  "baseline_manifest_source_count": 137,
+  "national_publication_allowed": false,
+  "excludes_quitasueno": true,
+  "provenance": {
+    "four_site_pilot_run": 43488453819,
+    "source_scope_comparison_run": 43491477657,
+    "diagnostic_code": "scripts/source_scope_comparison.py",
+    "references": [
+      "geoBoundaries COL ADM0",
+      "Natural Earth 10m land and minor islands"
+    ],
+    "reference_jurisdiction_status": "provisional; not authoritative for territory or water"
+  },
+  "candidate_cogs": [
+    {
+      "name": "Copernicus_DSM_COG_10_N01_00_W080_00_DEM",
+      "site": "tumaco",
+      "sample_zoom": 11,
+      "sample_xyz_tiles": 9,
+      "original_missing_dem_pixels": 113664,
+      "recovered_valid_native_dem_pixels": 90280,
+      "recovered_reference_land_pixels": 1691,
+      "recovered_outside_both_references_unknown": 88589,
+      "remaining_missing_dem_pixels": 23384,
+      "remaining_missing_reference_land_pixels": 0,
+      "selected_inventory_status": "excluded_pending_territorial_review",
+      "verified_original_valid_heights_unchanged": true
+    },
+    {
+      "name": "Copernicus_DSM_COG_10_N03_00_W082_00_DEM",
+      "site": "malpelo",
+      "sample_zoom": 11,
+      "sample_xyz_tiles": 9,
+      "original_missing_dem_pixels": 348672,
+      "recovered_valid_native_dem_pixels": 348672,
+      "recovered_reference_land_pixels": 1329,
+      "recovered_outside_both_references_unknown": 347343,
+      "remaining_missing_dem_pixels": 0,
+      "remaining_missing_reference_land_pixels": 0,
+      "selected_inventory_status": "excluded_pending_territorial_review",
+      "verified_original_valid_heights_unchanged": true
+    }
+  ],
+  "next_gate": [
+    "Compare official IGAC and DIMAR land/shoreline/island geometries with provisional Natural Earth and geoBoundaries classifications",
+    "Inspect nationwide land-reference reconciliation and candidate source scope",
+    "Do not infer bathymetry or fill DEM NoData with 0 m",
+    "Do not add these COGs to the official 137-source input manifest without a separate recorded decision"
+  ]
+}

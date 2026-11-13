@@ -60,7 +60,74 @@ the tile excluded if any missing required land elevations remain.
 `national_publication_allowed = false`.
 
 Completed, successful stage: small and medium batch merges and
-coast/island sample tests. Pending: investigate the north-south native
-source junction, analyze Tumaco gap, verify authoritative island
-boundary/scope and countrywide completeness and ownership.
+coast/island sample tests. The north-south sample and Tumaco gap have targeted follow-up results\nrecorded below. Still pending: authoritative island boundary/scope,\ncountrywide completeness, source-edge sampling and ownership.
 No national output is authorized by this report.
+
+## Follow-up — targeted per-case investigation, run 43419286112
+
+[Successful independent jobs](https://github.com/ColombiaTransit/colombia-height/actions/runs/43419286112)
+used original source COG sampling for case 1 and a tile-specific
+pixel/provenance mask for case 2. The first attempt
+[43418992885](https://github.com/ColombiaTransit/colombia-height/actions/runs/43418992885)
+exposed an invalid assumption that native COG footprint bounds
+exactly equal integer-degree lines; sampling was corrected to the
+actual northern/southern pixel-edge transforms.
+
+### Case 1 — Native pixel seam near 6°N: targeted diagnostic complete
+
+In **each** of the N05/N06 source pairs at 75°W and 74°W,
+350 longitude points were measured at native COG edge pixels,
+along with five consecutive within-source steps.
+
+| 1° longitude cell | Native border maximum | Median | p95 | Samples | Investigative seam flags |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| W075 | 31.861 m | 3.689 m | 15.899 m | 350 | 0 |
+| W074 | 41.881 m | 4.490 m | 19.443 m | 350 | 0 |
+
+Flags require border delta **>40m and >3× both immediate local
+native-pixel gradients**. No samples met both conditions.
+The previous 225.375m difference was measured between much more
+widely spaced zoom-10 pixel centers, not at the native COG edge
+pixels. The new result therefore **does not support an obvious
+artificial source seam in these sampled areas**. It also does not
+prove absence of localized source errors between the samples, nor
+validate every national COG edge. No smoothing or height correction
+was applied.
+
+**Case disposition:** sampled 6°N transition cleared for further
+regional **testing**, not blanket national publication.
+
+### Case 2 — Tumaco missing tile: cause and strict treatment identified
+
+The **only** incomplete tile in the nine tested zoom-11 tiles is:
+
+- XYZ: **11/574/1012**; TMS y = **1035**
+- Full tile bbox: W **-79.1015625** to **-78.9257812**;
+  N **1.9332268** to **2.1088987**
+- Missing subset bbox: W **-79.1015625** to **-78.9999390**;
+  N **2.0004784** to **2.1088987**
+- Missing output pixels: **23,384**, none within the Natural
+  Earth 10m land reference used for this test
+- All **64 sampled missing pixels** were outside the spatial
+  extent of the available downloaded native Copernicus COGs
+- Sources present in the batch include N01_W079, N01_W080,
+  and N02_W079; the missing upper-left patch falls outside
+  their footprints.
+
+**Case disposition:** the observed missing region is consistent
+with **no available source COG coverage** in the offshore patch,
+rather than lost data from batch merges. It must remain missing;
+never fill with 0m or -10000m. The strict complete-tile policy
+excludes XYZ 11/574/1012 from production until a separate
+publication-approved over-water / partial-tile policy is defined.
+Natural Earth outside-land is not itself proof of sea.
+Official coastline and island boundaries remain a countrywide
+publication prerequisite.
+
+### Release gate
+
+The two identified local anomalies have now been analyzed to
+a usable **test-level disposition**. Neither result authorizes
+national release. The remaining gates are the nationwide source mask,
+territorial geometry and island coverage, complete/partial tile
+policy and systematic COG edge QA.

@@ -126,3 +126,49 @@ The next experiment is the
 check Tumaco and Malpelo under both official IGAC administrative
 polygons and Natural Earth island references, preserving every
 existing DEM sample and all remaining NoData masks.
+
+
+## Exact original z13 DEM pixel recovery — successful run 43497684367
+
+[Native z13 IGAC recovery workflow](https://github.com/ColombiaTransit/colombia-height/actions/runs/43497684367)
+**passed**. It reopened selected native Copernicus COGs and recomputed
+the same 256×256 Web Mercator tiles with the two extra original COGs
+temporarily appended. All previous valid height samples were
+preserved within 0.001m; nothing was filled with 0m or a synthetic depth.
+
+| Result | Tumaco / N01_W080 | Malpelo / N03_W082 |
+| --- | ---: | ---: |
+| Incomplete z13 tiles sampled | 24 | 23 |
+| Missing native DEM pixels, before | 485,376 | 161,753 |
+| Real original Copernicus heights recovered | **460,333** | **145,625** |
+| Recovered pixels inside IGAC administrative polygons | **6,602** | **0** |
+| Missing pixels remaining inside IGAC administrative polygons | **0** | **0** |
+| Recovered pixels in Natural Earth land but outside IGAC | 99,151 | 0 |
+| Remaining missing DEM pixels, total | **25,043** | **16,128** |
+
+**Tumaco:** real native source data repaired all **6,602** missing
+height samples intersecting the IGAC department polygon in these 24
+z13 tiles. The source therefore has independently verified
+administrative-land pixel value, but the remaining nodata must not
+be declared sea or replaced with fictitious zero elevations.
+
+**Malpelo:** 145,625 native heights were recovered in the targeted
+23 z13 candidate tiles, but none of those recovered pixels were
+classified by the official IGAC *administrative* polygons or the
+Natural Earth land reference at **this specific zoom/selection**.
+This does not contradict the earlier z11 island audit showing
+1,329 missing Natural Earth island-reference pixels recovered.
+It illustrates why remote islets and high-zoom source masks require
+separate geographical and multi-zoom validation.
+
+Both remain **provisional**; unchanged 137-source production manifest,
+no MBTiles publication. The durable machine-readable decisions and
+the complete 52-COG candidate ID list are retained in
+[the official source review register](../data/official-igac-source-review-2026-11-13.json).
+
+**Remaining gate:** obtain a trustworthy *land* polygon and shoreline
+reference from the appropriate DIMAR/IGAC open datasets covering
+coasts, Malpelo and outlying Colombian islands; then evaluate only
+geographically relevant sources. An administrative boundary layer
+cannot classify all ocean pixels or automatically eliminate the
+51 remaining COG candidates.

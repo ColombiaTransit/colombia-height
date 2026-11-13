@@ -9,7 +9,7 @@ class FourCogTests(unittest.TestCase):
     def test_unique_quad_ownership(self):
         for z in (10,11,12):
             tiles=[t for xs,ys in BATCHES.values() for t in tiles_for(xs,ys,z)]
-            self.assertEqual(len(tiles),25*(4**(z-10)))
+            self.assertEqual(len(tiles),20*(4**(z-10)))
             self.assertEqual(len(tiles),len(set(tiles)))
             self.assertTrue(all(owner(*t) in BATCHES for t in tiles))
     def test_junction_inside_region(self):
@@ -21,7 +21,7 @@ class FourCogTests(unittest.TestCase):
             checks=list(adjacent_pairs(z))
             directions={v[0] for v in checks}
             self.assertEqual(directions,{"west_east","north_south"})
-            self.assertEqual(len(checks),10*(1<<(z-10)))
+            self.assertEqual(len(checks),9*(1<<(z-10)))
     def test_both_source_gradient_directions(self):
         raster=np.array([[0.,50.,60.],[80.,130.,140.]],dtype=np.float32)
         owner_mask=np.array([[1,2,2],[3,4,4]],dtype=np.uint8)

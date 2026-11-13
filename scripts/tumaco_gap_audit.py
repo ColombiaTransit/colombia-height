@@ -82,7 +82,7 @@ def audit(output):
             reference_land=reference_mask(bounds,local_geometry)
             n=int(invalid.sum())
             row={"xyz":list(tile),"tms_y":(1<<ZOOM)-1-tile[2],
-                 "tile_bounds_lonlat":[round(v,7) for v in mercantile.bounds(tile)],
+                 "tile_bounds_lonlat":[round(v,7) for v in mercantile.bounds(tile[1],tile[2],tile[0])],
                  "missing_pixels":n,
                  "missing_inside_Natural_Earth_land":int((invalid&reference_land).sum()),
                  "missing_outside_Natural_Earth_land":int((invalid&~reference_land).sum()),
@@ -93,7 +93,7 @@ def audit(output):
     if not gaps:
         raise AssertionError("Expected missing source pixels in known Tumaco z11 pilot area; audit assumptions changed")
     report={"generated_utc":datetime.now(timezone.utc).isoformat(),
-            "status":"tumaco_gap_located_in_native_source_coverage",
+            "status":"tumaco_gap_located_and_source_extent_sampled",
             "site":"tumaco","probe_lonlat":list(SITE),"zoom":ZOOM,
             "source_cogs":names,
             "tiles_checked":len(details),"tiles_incomplete":len(gaps),
@@ -102,7 +102,7 @@ def audit(output):
             "missing_outside_reference_land_total":sum(d["missing_outside_Natural_Earth_land"] for d in details),
             "affected_tiles":gaps,
             "all_tiles":details,
-            "production_policy":"Do not encode incomplete tiles or fill unknown heights with 0m/-10000m. Reference outside-land is not proof of ocean.",
+            "production_policy":"Keep incomplete tiles out of strict feed. Do not fill unknown heights with 0m/-10000m. Outside Natural Earth is not proof of ocean.",
             "national_publication_allowed":False}
     (output/"tumaco-native-gap-report.json").write_text(json.dumps(report,indent=2)+"\n")
     print(json.dumps({k:v for k,v in report.items() if k not in ("all_tiles",)},indent=2),flush=True)

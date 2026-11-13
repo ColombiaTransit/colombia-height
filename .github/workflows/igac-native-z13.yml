@@ -1,0 +1,74 @@
+name: IGAC z13 Native DEM Recovery for Tumaco and Malpelo
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/igac-native-z13.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  native-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 95
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install existing DEM and polygon dependencies
+        run: python -m pip install -r requirements-terrain.txt -r requirements-island-inventory.txt
+      - name: Verify offline regression tests including no synthetic height rules
+        run: python -m unittest discover -s tests -v
+      - name: Download all 32 full-national land study records
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ColombiaTransit/colombia-height
+          run-id: 43490555676
+          pattern: colombia-land-coverage-shard-*
+          merge-multiple: true
+          path: output/national-land
+      - name: Rebuild and verify unchanged 137-source inventory
+        run: |
+          python scripts/inventory.py --output output --workers 8
+          python scripts/extend_inventory.py --inventory output --islands data/colombia-island-probes.json
+          python - <<'PY'
+          import csv
+          with open("output/colombia_dem_manifest_extended.csv",newline="") as f:
+              rows=list(csv.DictReader(f))
+          assert len(rows)==137 and len({x["name"] for x in rows})==137
+          assert all(x["status"]=="ok" for x in rows)
+          print("Baseline still exactly 137 selected COGs")
+          PY
+      - name: Compare actual original z13 DEM pixels against IGAC and Natural Earth masks
+        run: |
+          python scripts/official_native_z13.py --manifest output/colombia_dem_manifest_extended.csv --national output/national-land --output output/official-native-z13
+      - name: Enforce strict source and terrain publication gates
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path("output/official-native-z13/igac-native-z13-recovery.json").read_text())
+          assert r["official_IGAC_source_class"].startswith("official_IGAC")
+          assert r["original_source_count"]==137
+          assert set(r["site_summaries"])=={"tumaco","malpelo"}
+          assert r["z13_tile_count"]>0
+          assert r["source_manifest_modified"] is False
+          assert r["synthetic_height_values_inserted"]==0
+          assert r["national_publication_allowed"] is False
+          assert all(row["max_original_valid_height_difference_m"]<=.001
+                     for row in r["per_tile_results"])
+          print("Native z13 real-height recovery by site:",r["site_summaries"])
+          PY
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: colombia-igac-native-z13-recovery
+          path: output/official-native-z13/igac-native-z13-recovery.json
+          if-no-files-found: error
+          retention-days: 1

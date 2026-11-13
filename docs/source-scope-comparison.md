@@ -89,3 +89,27 @@ manifest or change the national build/release gate until the official
 IGAC/DIMAR island-and-coast geometry and nationwide 32-shard land report
 have been reviewed. Preserve the selected-vs-augmented native-pixel
 comparison as reproducible evidence.
+
+
+## Official cartographic gate: IGAC versus DIMAR
+
+Before accepting the two new COGs into national input, compare the
+recovered land-reference footprint with:
+
+- [IGAC: Líneas Limítrofes y Entidades Territoriales](https://mapas2.igac.gov.co/server/rest/services/limites/limites/MapServer)
+  (official administrative/territorial lines and departments, **not**
+  automatically an exact pixel-scale shoreline or bathymetry mask).
+- [Colombia en Mapas: instructions to download official boundary datasets](https://www.colombiaenmapas.gov.co/colombia-mapas/preguntas-frecuentes-faq/index.html)
+  (lists GeoJSON, GeoPackage, shapefile and geodatabase).
+- [DIMAR geospatial data infrastructure](https://www.dimar.mil.co/node/5834)
+  (marine/coastal datasets; inspect provenance, coverage and licensing).
+- [DIMAR / CECOLDO data access](https://cecoldo.dimar.mil.co/web/solicitudes)
+  (open/downloadable datasets first; request access if necessary).
+
+Do not rasterize *administrative boundary lines* as though they were a
+validated coastline. A verified coastline requires shoreline polygons,
+island coverage, datum/scale, and information on any maritime boundary.
+At zoom 11 especially, a missing height outside the reference polygon
+must remain unresolved until coastal evidence justifies treating the
+pixel differently. Even after the scope decision, a missing source value
+must not be replaced by an invented bathymetric depth.

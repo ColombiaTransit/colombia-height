@@ -14,6 +14,10 @@ Compare two independent but **non-authoritative** layers:
   (versioned GeoJSON URL and licence recorded in the report).
 - [Natural Earth 1:10m land and minor islands](https://www.naturalearthdata.com/downloads/10m-physical-vectors/)
   (both layers; minor islands can be missing from a simplified country polygon).
+  The otherwise worldwide Natural Earth reference is clipped to the explicit
+  Colombia study envelope **lon -84…-66, lat -5…17** before any raster checks;
+  this avoids false low-zoom gaps from other continents, but the envelope is
+  not a sovereignty or coastline boundary.
 
 Authoritative IGAC mapping is a *future territorial review*.
 [IGAC publishes administrative and border geometry](https://mapas2.igac.gov.co/server/rest/services/limites/limites/MapServer),

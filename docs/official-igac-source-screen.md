@@ -79,3 +79,50 @@ Colombian land, distinguish neighboring countries and remote islets,
 then test native DEM recovery only for geographically justified source
 candidates. Final coast/island policy and DEM edge validation are still
 required before publication.
+
+
+## Verified geometric results — 13 November 2026
+
+[Run #43497166858](https://github.com/ColombiaTransit/colombia-height/actions/runs/43497166858)
+**passed** using the *direct official IGAC MapServer*; it returned 33
+departmental polygons. The original unpaginated service query failed
+HTTP 500 in [run #43496738265](https://github.com/ColombiaTransit/colombia-height/actions/runs/43496738265);
+the corrected direct-source request succeeded, **without invoking the
+explicitly unverified fallback**.
+
+| Evidence | Verified result |
+| --- | ---: |
+| Additional source COG candidates | 52 |
+| z13 tiles with incomplete native DEM | 1,917 |
+| z13 tiles with Natural Earth-only missing land reference pixels | 1,004 |
+| Such z13 tiles intersecting an official IGAC department polygon somewhere | **2** |
+| Public COGs with an IGAC polygon AND overlapping missing z13 tile/cell area (tier A) | **1** |
+| Public COGs without qualifying IGAC department polygon contact (tier C) | **51** |
+
+**The sole tier A source:**
+`Copernicus_DSM_COG_10_N01_00_W080_00_DEM`, cell lon -80…-79,
+lat 1…2. Its administrative contact is **Nariño**. There are 24
+incomplete z13 tile source hints for this COG, eight with
+Natural Earth-only missing pixels, and only **two** with both an
+IGAC administrative polygon and the COG cell in the tile area.
+These are geographic intersections, **not proven missing land DEM pixels**.
+
+The Malpelo source
+`Copernicus_DSM_COG_10_N03_00_W082_00_DEM` was classified tier C
+because the official departmental polygons do not capture that
+island in this screening. However, an independent native-COG
+[run #43491477657](https://github.com/ColombiaTransit/colombia-height/actions/runs/43491477657)
+**verified real recovery** of its provisional missing island heights.
+**Do not discard Malpelo or any tiny island solely because it is not
+present in the IGAC administrative department geometry.**
+
+Other tier C candidates should be distinguished as likely outside
+Colombia mainland, coastline, or potentially omitted small islands
+using independent official DIMAR coastline/island layers before any
+final exclusion. No source is approved or added by this screen.
+
+The next experiment is the
+[exact z13 original-pixel recovery diagnostic](../.github/workflows/igac-native-z13.yml):
+check Tumaco and Malpelo under both official IGAC administrative
+polygons and Natural Earth island references, preserving every
+existing DEM sample and all remaining NoData masks.

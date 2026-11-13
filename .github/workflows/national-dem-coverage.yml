@@ -73,6 +73,27 @@ jobs:
           path: output
       - name: Sample one geographic shard at z10-z11 (not national)
         run: python scripts/national_dem_coverage.py --manifest output/colombia_dem_manifest_extended.csv --output output/national-coverage --shard 12 --minzoom 10 --maxzoom 11 --limit 24
+      - name: Known partial-coverage regression at Tumaco
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from sys import path
+          path.insert(0,"scripts")
+          from national_tile_plan import parse_manifest
+          from national_dem_coverage import assess_tile
+          items=parse_manifest(Path("output/colombia_dem_manifest_extended.csv"))
+          opened={}
+          try:
+              result,names,count=assess_tile(items,opened,Path("output/national-coverage/source-cache"),(11,574,1012))
+              assert result["coverage"]=="partial_dem_coverage",result
+              assert result["missing_pixels"]==23384,result
+              assert result["valid_pixels"]==65536-23384,result
+              print("Tumaco known partial tile correctly classified:",result)
+          finally:
+              for src in opened.values():
+                  src.close()
+          PY
       - name: Check sample is never mislabeled national
         run: |
           python - <<'PY'

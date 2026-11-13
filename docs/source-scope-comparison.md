@@ -58,3 +58,34 @@ is a separate diagnostic workflow. It:
 The national source selection remains **137 Copernicus COGs**. Any
 source expansion requires a separate documented decision backed by
 territorial and DEM pixel-coverage evidence.
+
+
+## Measured results — successful run 43491477657 (13 November 2026)
+
+[Actions report](https://github.com/ColombiaTransit/colombia-height/actions/runs/43491477657)
+confirmed the 18-tile native source comparison. Recovered reference-land
+pixels are counted using the provisional combined reference, not a
+certified Colombian territory mask.
+
+| Native-source metric | Tumaco (9 z11 tiles) | Malpelo (9 z11 tiles) |
+| --- | ---: | ---: |
+| Baseline missing DEM pixels | 113,664 | 348,672 |
+| Actual source pixels recovered with the single local extra COG | 90,280 | 348,672 |
+| Recovered provisional reference-land pixels | 1,691 | 1,329 |
+| Remaining missing provisional land pixels | **0** | **0** |
+| Remaining missing pixels outside both reference land polygons | **23,384** | **0** |
+| Tiles with recovered DEM pixels | 3 | 6 |
+
+**Result:** Both source candidates eliminate *all 3,020* missing pixels
+inside the provisional land references at the two test sites, while
+preserving every previously valid DEM height within 0.001m.
+The 23,384 Tumaco residual pixels are outside *both* reference polygons,
+but **cannot be declared open sea without a separate official coastline
+review**. This is not a reason to fill them with a synthetic 0m.
+
+**Recommendation:** Promote the two source candidates to *reviewed
+provisional land-coverage fixes*, but **do not modify** the 137-source
+manifest or change the national build/release gate until the official
+IGAC/DIMAR island-and-coast geometry and nationwide 32-shard land report
+have been reviewed. Preserve the selected-vs-augmented native-pixel
+comparison as reproducible evidence.

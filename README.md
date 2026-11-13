@@ -15,11 +15,17 @@ Regional, two-COG and four-COG pilot seam validation succeeded, but
 DEM coverage does not imply Colombian land jurisdiction; missing DEM values
 must not be replaced with 0 m or artificial -10000 m bathymetry.
 
-The next step is the [land-reference validation](docs/national-land-coverage.md):
-first a **36-tile pilot** across Tumaco, San Andrés, Providencia, Malpelo;
-then optionally a separately dispatched full 32-shard land-reference audit.
-Its polygon sources are provisional and are **not** an official ocean mask.
-Every intermediate artifact has short retention; no permanent Releases exist.
+The [national land-reference audit](docs/national-land-results-2026-11-13.md)
+completed successfully across all 32 shards. A subsequent
+[official IGAC department-polygon source screen](docs/official-igac-source-screen.md)
+examined 52 omitted candidate COGs and found one direct administrative-land
+candidate at Tumaco. A follow-up direct native-pixel z13 comparison verified
+real DEM-height recovery at Tumaco and Malpelo. The 52-source screen and
+two-source experiment are recorded in the
+[durable source review register](data/official-igac-source-review-2026-11-13.json).
+Neither administrative polygons nor Natural Earth establish a certified
+coastline or the status of every remote island. No additional COG has yet
+been approved for inclusion; all 137 selected COGs remain unchanged.
 
 ## Source and attribution
 

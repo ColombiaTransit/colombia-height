@@ -1,0 +1,55 @@
+name: DEM Source Seam and Coast Coverage Quality Gates
+
+on:
+  push:
+    paths:
+      - '.github/workflows/dem-quality-gates.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install terrain and island-reference tools
+        run: python -m pip install -r requirements-terrain.txt -r requirements-island-inventory.txt
+      - name: Run full regression suite
+        run: python -m unittest discover -s tests -v
+      - name: Run native DEM seam and coast/island diagnostics
+        run: python scripts/dem_quality_gates.py --output output/quality-gates
+      - name: Confirm audit report and publication stop
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path("output/quality-gates/dem-quality-gates-report.json")
+          r=json.loads(p.read_text())
+          assert r["national_publication_allowed"] is False
+          assert len(r["coastal_island_sites"])==6
+          assert len(r["junction"]["source_cogs"])==4
+          assert r["junction"]["native_elevation_gradient_diagnostics"]["horizontal"]["cross_source_pairs"]>0
+          assert r["junction"]["native_elevation_gradient_diagnostics"]["vertical"]["cross_source_pairs"]>0
+          for item in r["coastal_island_sites"]:
+              assert item["complete_tiles"]+item["tiles_with_missing_pixels"]==item["sample_tiles"]
+              counts=item["counts"]
+              assert sum(counts[k] for k in ("valid_reference_land","missing_reference_land","valid_outside_reference_land","missing_outside_reference_land"))==counts["total_pixels"]
+          print("Coast/island audited:",[s["site"] for s in r["coastal_island_sites"]])
+          print("Source junction max cross-pixel gradient:",r["junction"]["observed_max_cross_source_gradient_m"])
+          print("National publication remains blocked pending manual review")
+          PY
+      - name: Upload compact diagnostic report only
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: colombia-dem-quality-gates-report
+          path: output/quality-gates/dem-quality-gates-report.json
+          retention-days: 1
+          if-no-files-found: error

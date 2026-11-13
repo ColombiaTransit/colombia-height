@@ -25,10 +25,10 @@ from two_cog_seam_pilot import (
 
 BASE_Z=10
 X_RANGE=range(299,304)
-Y_RANGE=range(492,497)
+Y_RANGE=range(493,497)
 BATCHES={
-    "northwest":(range(299,302),range(492,495)),
-    "northeast":(range(302,304),range(492,495)),
+    "northwest":(range(299,302),range(493,495)),
+    "northeast":(range(302,304),range(493,495)),
     "southwest":(range(299,302),range(495,497)),
     "southeast":(range(302,304),range(495,497)),
 }

@@ -1,0 +1,84 @@
+name: Resolve Native Source Seam and Tumaco Gap
+
+on:
+  push:
+    paths:
+      - '.github/workflows/resolve-dem-cases.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-seam:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install terrain dependencies
+        run: python -m pip install -r requirements-terrain.txt -r requirements-island-inventory.txt
+      - name: Native seam audit regression tests
+        run: python -m unittest discover -s tests -v
+      - name: Compare original Copernicus rows around 6 degrees North
+        run: python scripts/native_source_seam_audit.py --output output/native-source-seam
+      - name: Verify native-resolution border and no publication
+        run: |
+          python - <<'PY'
+          import json
+          r=json.load(open("output/native-source-seam/native-seam-report.json"))
+          assert len(r["cells"])==2
+          assert not r["publication_allowed"]
+          for cell in r["cells"]:
+              assert cell["native_cross_border"]["count"]>100
+              assert cell["north_interior_1_to_5_px"]["count"]>100
+              assert cell["south_interior_1_to_5_px"]["count"]>100
+          print("Native-source boundary strips checked:",[c["longitude_degree_cell"] for c in r["cells"]])
+          PY
+      - name: Upload native seam findings only
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: colombia-native-source-seam-audit
+          path: output/native-source-seam/native-seam-report.json
+          retention-days: 1
+          if-no-files-found: error
+
+  tumaco-gap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install terrain and reference tools
+        run: python -m pip install -r requirements-terrain.txt -r requirements-island-inventory.txt
+      - name: Tumaco gap audit regression tests
+        run: python -m unittest discover -s tests -v
+      - name: Identify exactly which coastal z11 tile pixels lack native source data
+        run: python scripts/tumaco_gap_audit.py --output output/tumaco-gap
+      - name: Verify no synthetic heights and identify affected tiles
+        run: |
+          python - <<'PY'
+          import json
+          r=json.load(open("output/tumaco-gap/tumaco-native-gap-report.json"))
+          assert r["tiles_checked"]==9
+          assert r["tiles_incomplete"]>0
+          assert r["missing_pixels_total"]>0
+          assert sum(t["missing_pixels"] for t in r["affected_tiles"])==r["missing_pixels_total"]
+          assert not r["national_publication_allowed"]
+          print("Affected tiles:",[(x["xyz"],x["missing_pixels"]) for x in r["affected_tiles"]])
+          PY
+      - name: Upload Tumaco evidence only
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: colombia-tumaco-native-gap-audit
+          path: output/tumaco-gap/tumaco-native-gap-report.json
+          retention-days: 1
+          if-no-files-found: error

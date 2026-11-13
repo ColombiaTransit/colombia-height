@@ -86,10 +86,19 @@ jobs:
           opened={}
           try:
               result,names,count=assess_tile(items,opened,Path("output/national-coverage/source-cache"),(11,574,1012))
+              from medellin_terrain import source_tiles
+              import mercantile
+              b=mercantile.bounds(574,1012,11)
+              public=source_tiles((b.west,b.south,b.east,b.north))
+              selected={i["name"] for i in items}
+              extras=[i["name"] for i in public if i["name"] not in selected]
+              print("Tumaco selected manifest COGs:",names)
+              print("Tumaco public COGs outside 137-source manifest:",extras)
               assert result["coverage"]=="partial_dem_coverage",result
-              assert result["missing_pixels"]==23384,result
-              assert result["valid_pixels"]==65536-23384,result
-              print("Tumaco known partial tile correctly classified:",result)
+              assert result["missing_pixels"]>=23384,result
+              assert extras, "Expected mismatch with previous all-source Tumaco audit; review if empty"
+              print("Tumaco manifest-only classification:",result)
+              print("Additional missing pixels vs all-source pilot:",result["missing_pixels"]-23384)
           finally:
               for src in opened.values():
                   src.close()

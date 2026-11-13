@@ -1,0 +1,73 @@
+name: Four Copernicus COG Source Junction QA
+
+on:
+  workflow_dispatch:
+    inputs:
+      maxzoom:
+        description: Highest zoom to render (start with 11)
+        required: true
+        type: choice
+        options: ['11', '12']
+        default: '11'
+
+permissions:
+  contents: read
+
+jobs:
+  four-cog:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install source and terrain dependencies
+        run: python -m pip install -r requirements-terrain.txt -r requirements-island-inventory.txt
+      - name: Regression tests
+        run: python -m unittest discover -s tests -v
+      - name: Check disk before run
+        run: df -h .
+      - name: Render four quadrant batches with native Copernicus COGs
+        run: python scripts/four_cog_seam_pilot.py --maxzoom ${{ inputs.maxzoom }} --output output/four-cog
+      - name: Validate source junction and both batch-edge orientations
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json
+          import sqlite3
+          root=Path("output/four-cog")
+          report=json.loads((root/"four-cog-report.json").read_text())
+          qa=report["quality_assurance"]
+          assert len(report["batches"])==4
+          assert len(qa["all_four_source_cogs"])==4
+          assert qa["junction_native_cog_count"]==4
+          assert qa["junction_native_source_transitions"]["east_west_source_pixel_pairs"]>0
+          assert qa["junction_native_source_transitions"]["north_south_source_pixel_pairs"]>0
+          assert qa["maximum_reference_error_m"]<=0.16
+          assert qa["verified_cross_batch_pairs"]["west_east"]>0
+          assert qa["verified_cross_batch_pairs"]["north_south"]>0
+          count=sum(sum(b["tiles_by_zoom"].values()) for b in report["batches"])
+          assert count==report["merged"]["tiles"]
+          with sqlite3.connect(root/"four-cog-merged.mbtiles") as db:
+              assert db.execute("PRAGMA integrity_check").fetchone()[0]=="ok"
+              assert db.execute("SELECT COUNT(*) FROM tiles").fetchone()[0]==count
+          print("Native COGs:",qa["all_four_source_cogs"])
+          print("Merged tiles:",count)
+          print("East-west batch boundaries:",qa["verified_cross_batch_pairs"]["west_east"])
+          print("North-south batch boundaries:",qa["verified_cross_batch_pairs"]["north_south"])
+          print("Junction source transitions:",qa["junction_native_source_transitions"])
+          print("Maximum reference error (m):",qa["maximum_reference_error_m"])
+          PY
+      - name: Check disk after run
+        if: always()
+        run: df -h .
+      - name: Upload compact report only; one-day retention
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: colombia-four-cog-junction-validation
+          path: output/four-cog/four-cog-report.json
+          retention-days: 1
+          if-no-files-found: error

@@ -1,0 +1,62 @@
+name: Official IGAC National DEM Source Scope Screen
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/official-territory-screen.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  screen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install DEM and polygon test dependencies
+        run: python -m pip install -r requirements-terrain.txt -r requirements-island-inventory.txt
+      - name: Run all regression tests including strict geo screening
+        run: python -m unittest discover -s tests -v
+      - name: Download all 32 reconciled native land-coverage registries
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ColombiaTransit/colombia-height
+          run-id: 43490555676
+          pattern: colombia-land-coverage-shard-*
+          merge-multiple: true
+          path: output/national-land
+      - name: Validate all inputs and classify 52 COG candidates against IGAC department polygons
+        run: python scripts/official_territory_screen.py --input output/national-land --output output/official-territory
+      - name: Enforce no promotion, no invented ocean, no releases
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path("output/official-territory/igac-source-scope-screen.json").read_text())
+          assert r["national_source_run"]==43490555676
+          assert r["source_candidates_considered"]==52
+          assert r["z13_incomplete_tiles"]==1917
+          assert r["z13_ne_only_land_gap_tiles"]==1004
+          assert r["source_manifest_changes"]==0
+          assert r["national_publication_allowed"] is False
+          assert sum(r["screening_tiers"].values())==52
+          assert all(v["approval_status"].startswith("NOT_APPROVED")
+                     for v in r["candidate_source_rankings"])
+          print("IGAC official departmental geometric screening:",r["screening_tiers"])
+          print("NO source was accepted and NO missing height was filled")
+          PY
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: colombia-igac-source-scope-screen
+          path: output/official-territory/igac-source-scope-screen.json
+          retention-days: 1
+          if-no-files-found: error

@@ -35,6 +35,7 @@ PREFIXES = (
     "colombia-land-coverage-pilot",
     "colombia-land-coverage-shard-",
     "colombia-national-land-coverage-report",
+    "colombia-unselected-coastal-cogs-diagnostic",
 )
 API = "https://api.github.com"
 

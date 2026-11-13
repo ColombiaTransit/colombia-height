@@ -94,7 +94,16 @@ class References:
         if gb_geometry.is_empty or not ne_geometries:
             raise ValueError("Missing land-reference geometry")
         self.gb = gb_geometry
-        self.ne = ne_geometries
+        # Coarse XYZ tiles at z0-z8 span other continents. Never mistake
+        # unrelated world land for Colombian candidate land. Clip the global
+        # Natural Earth layer to the documented Colombia study envelope first;
+        # it is still a provisional reference, NOT a jurisdiction boundary.
+        study = box(-84.0, -5.0, -66.0, 17.0)
+        self.ne = [part for geometry in ne_geometries
+                   if geometry.intersects(study)
+                   for part in [geometry.intersection(study)] if not part.is_empty]
+        if not self.ne:
+            raise ValueError("No Natural Earth land inside Colombia study area")
         self.index = STRtree(self.ne)
         self.url = gb_url
         self.license = gb_license
@@ -280,6 +289,7 @@ def scan(manifest, output, mode="pilot", shard=None):
         "geoBoundaries_url": references.url,
         "geoBoundaries_license": references.license,
         "natural_earth_urls": NE_SOURCES,
+        "natural_earth_study_envelope_lonlat": [-84.0, -5.0, -66.0, 17.0],
         "all_missing_pixels_classified_as_water": False,
         "complete": mode == "full",
         "national_publication_allowed": False,

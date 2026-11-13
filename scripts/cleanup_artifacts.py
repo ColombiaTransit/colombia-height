@@ -31,6 +31,7 @@ PREFIXES = (
     "colombia-dem-coverage-pilot-shard",
     "colombia-dem-coverage-shard-",
     "colombia-national-dem-coverage-register",
+    "temporary-land-source-manifest",
     "colombia-land-coverage-pilot",
     "colombia-land-coverage-shard-",
     "colombia-national-land-coverage-report",

@@ -1,0 +1,163 @@
+name: National Land Coverage Validation
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        type: choice
+        description: Pilot 4 coastal/island sites, or independently audit all 32 national DEM shards
+        options: ['pilot', 'full']
+        default: 'pilot'
+  push:
+    paths:
+      - '.github/workflows/national-land-coverage.yml'
+      - 'scripts/national_land_coverage.py'
+      - 'tests/test_national_land_coverage.py'
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    outputs:
+      full: ${{ steps.mode.outputs.full }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install existing DEM and polygon dependencies
+        run: python -m pip install -r requirements-terrain.txt -r requirements-island-inventory.txt
+      - name: Run regression suite, including fail-closed land masking tests
+        run: python -m unittest discover -s tests -v
+      - name: Rebuild and validate exact 137-source study inventory
+        run: |
+          python scripts/inventory.py --output output --workers 8
+          python scripts/extend_inventory.py --inventory output --islands data/colombia-island-probes.json
+          python - <<'PY'
+          import csv
+          from pathlib import Path
+          with (Path("output")/"colombia_dem_manifest_extended.csv").open(newline="") as f:
+              rows=list(csv.DictReader(f))
+          assert len(rows)==137, len(rows)
+          assert len({r["name"] for r in rows})==137
+          assert all(r["status"]=="ok" for r in rows)
+          print("Verified selected 137 Copernicus COGs; excluded Quitasueño")
+          PY
+      - id: mode
+        env:
+          MODE: ${{ github.event_name == 'push' && 'pilot' || inputs.mode }}
+        run: |
+          if [ "$MODE" = full ]; then echo "full=true" >> "$GITHUB_OUTPUT"; else echo "full=false" >> "$GITHUB_OUTPUT"; fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: temporary-land-source-manifest
+          path: output/colombia_dem_manifest_extended.csv
+          retention-days: 1
+          if-no-files-found: error
+
+  pilot:
+    needs: prepare
+    if: needs.prepare.outputs.full != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: python -m pip install -r requirements-terrain.txt -r requirements-island-inventory.txt
+      - uses: actions/download-artifact@v4
+        with:
+          name: temporary-land-source-manifest
+          path: output
+      - name: Evaluate 36 zoom-11 tiles at Tumaco, San Andrés, Providencia, Malpelo
+        run: python scripts/national_land_coverage.py --manifest output/colombia_dem_manifest_extended.csv --mode pilot --output output/national-land
+      - name: Verify bounded pilot and explicit release lock
+        run: |
+          python - <<'PY'
+          import gzip, json
+          from pathlib import Path
+          root=Path("output/national-land")
+          s=json.loads((root/"land-pilot-summary.json").read_text())
+          assert s["tiles_checked"]==36 and set(s["pilot_sites"])=={"tumaco","san_andres","providencia","malpelo"}
+          assert not s["national_publication_allowed"]
+          assert not s["all_missing_pixels_classified_as_water"]
+          with gzip.open(root/"land-pilot-tiles.ndjson.gz","rt") as f:
+              rows=[json.loads(line) for line in f]
+          assert len(rows)==36
+          cats=("missing_both_land_references","missing_geoboundaries_only","missing_natural_earth_only","missing_outside_both_references")
+          assert all(sum(row[k] for k in cats)==row["missing_dem_pixels"] for row in rows)
+          print("4-site preliminary land audit:",s["pilot_sites"])
+          print("Possible out-of-manifest COGs:",s["unselected_public_cogs_at_missing_pixels"])
+          PY
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: colombia-land-coverage-pilot
+          path: |
+            output/national-land/land-pilot-summary.json
+            output/national-land/land-pilot-tiles.ndjson.gz
+          retention-days: 1
+          if-no-files-found: error
+
+  full:
+    if: needs.prepare.outputs.full == 'true'
+    needs: prepare
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31]
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: python -m pip install -r requirements-terrain.txt -r requirements-island-inventory.txt
+      - uses: actions/download-artifact@v4
+        with:
+          name: temporary-land-source-manifest
+          path: output
+      - name: Re-evaluate native DEM and classify missing pixel land references
+        run: python scripts/national_land_coverage.py --manifest output/colombia_dem_manifest_extended.csv --mode full --shard ${{ matrix.shard }} --output output/national-land
+      - uses: actions/upload-artifact@v4
+        with:
+          name: colombia-land-coverage-shard-${{ matrix.shard }}
+          path: |
+            output/national-land/land-summary-*.json
+            output/national-land/land-shard-*.ndjson.gz
+          retention-days: 1
+          if-no-files-found: error
+
+  reconcile:
+    if: needs.prepare.outputs.full == 'true'
+    needs: [prepare, full]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r requirements-terrain.txt -r requirements-island-inventory.txt
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: colombia-land-coverage-shard-*
+          merge-multiple: true
+          path: output/national-land
+      - name: Reconcile exact 32-shard 137-source provisional registry
+        run: python scripts/national_land_coverage.py --output output/national-land --reconcile
+      - uses: actions/upload-artifact@v4
+        with:
+          name: colombia-national-land-coverage-report
+          path: output/national-land/national-land-reference-summary.json
+          retention-days: 1
+          if-no-files-found: error

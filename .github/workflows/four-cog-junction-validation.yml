@@ -1,4 +1,5 @@
 name: Four Copernicus COG Source Junction QA
+# On-push test is scoped to this workflow file; no national data publication.
 
 on:
   push:

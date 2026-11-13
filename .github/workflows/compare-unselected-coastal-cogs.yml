@@ -21,7 +21,7 @@ jobs:
           cache: pip
       - name: Install existing DEM polygon dependencies
         run: python -m pip install -r requirements-terrain.txt -r requirements-island-inventory.txt
-      - name: Regressions: preserve native heights, never infer sea from land-reference absence
+      - name: "Regressions: preserve native heights, never infer sea from land-reference absence"
         run: python -m unittest discover -s tests -v
       - name: Regenerate exact 137-COG selected manifest
         run: |

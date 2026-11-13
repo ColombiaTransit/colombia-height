@@ -27,6 +27,10 @@ PREFIXES = (
     "colombia-dem-quality-gates-report",
     "colombia-native-source-seam-audit",
     "colombia-tumaco-native-gap-audit",
+    "temporary-dem-source-manifest",
+    "colombia-dem-coverage-pilot-shard",
+    "colombia-dem-coverage-shard-",
+    "colombia-national-dem-coverage-register",
 )
 API = "https://api.github.com"
 

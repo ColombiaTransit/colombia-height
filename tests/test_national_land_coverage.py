@@ -66,6 +66,15 @@ class NationalLandCoverageTests(unittest.TestCase):
         self.assertEqual(int((gb & ne).sum()), 0)
         self.assertEqual(lon.shape, lat.shape)
 
+    def test_low_zoom_study_scope_excludes_unrelated_world_land(self):
+        # A global z0 tile should not count e.g. European land as a
+        # suspected missing Colombian height: the NE layer is clipped.
+        colombia = box(-80.0, 0.0, -79.0, 1.0)
+        europe = box(-1.0, 50.0, 1.0, 52.0)
+        refs = References(colombia, [europe, colombia], "test", "test")
+        self.assertEqual(len(refs.ne), 1)
+        self.assertTrue(refs.ne[0].covers(colombia.representative_point()))
+
     def test_unselected_cog_detection_does_not_expand_manifest(self):
         missing = np.zeros((256, 256), bool)
         missing[0, 0] = True

@@ -1,6 +1,9 @@
 name: Cleanup Temporary DEM Artifacts
 
 on:
+  push:
+    paths:
+      - '.github/workflows/cleanup-artifacts.yml'
   workflow_dispatch:
     inputs:
       mode:
@@ -41,8 +44,8 @@ jobs:
       - name: Remove completed temporary test artifacts
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          MODE: ${{ github.event_name == 'schedule' && 'delete' || inputs.mode }}
-          AGE_HOURS: ${{ github.event_name == 'schedule' && '24' || inputs.minimum_age_hours }}
+          MODE: ${{ (github.event_name == 'schedule' || github.event_name == 'push') && 'delete' || inputs.mode }}
+          AGE_HOURS: ${{ github.event_name == 'schedule' && '24' || github.event_name == 'push' && '0' || inputs.minimum_age_hours }}
         run: |
           args=(--repo "$GITHUB_REPOSITORY" --minimum-age-hours "$AGE_HOURS")
           if [ "$MODE" = "delete" ]; then args+=(--delete); fi

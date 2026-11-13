@@ -24,6 +24,7 @@ PREFIXES = (
     "colombia-antioquia-seam-validation",
     "colombia-two-cog-seam-validation",
     "colombia-four-cog-junction-validation",
+    "colombia-dem-quality-gates-report",
 )
 API = "https://api.github.com"
 

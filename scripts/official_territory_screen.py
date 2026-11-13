@@ -84,49 +84,94 @@ def load_incomplete_rows(root):
     return rows, focus, ne_gaps, names
 
 
-def get_igac_features():
-    """Read only official departmental polygons; no fallback to unverified land."""
-    args = {
-        "where": "1=1", "outFields": "OBJECTID,DeCodigo,DeNombre",
-        "outSR": "4326", "returnGeometry": "true",
-        "f": "geojson", "resultOffset": "0", "resultRecordCount": "100",
+IGAC_ALTERNATES = [
+    (IGAC_SERVICE, "official_IGAC_primary"),
+    ("https://mapas2.igac.gov.co/server/rest/services/carto/departamentos/MapServer/0",
+     "official_IGAC_alternate"),
+    ("https://services3.arcgis.com/87J8ieBcJTwm5kkV/ArcGIS/rest/services/IGAC_Colombia_Departamentos/FeatureServer/31",
+     "public_IGAC_labelled_hosted_copy_UNVERIFIED"),
+]
+
+
+def request_json(url, params, timeout=90):
+    resp = requests.get(url, params=params, timeout=(20, timeout),
+                        headers={"User-Agent": "ColombiaTransit-terrain-source-scope-research/1.0"})
+    resp.raise_for_status()
+    result = resp.json()
+    if "error" in result:
+        raise RuntimeError(f"ArcGIS service error: {str(result['error'])[:250]}")
+    return result, resp.url
+
+
+def get_service_features(url):
+    """Try one GET for all features, then ID-based subrequests on failure."""
+    query = url + "/query"
+    fields = "OBJECTID,DeCodigo,DeNombre"
+    bulk = {
+        "where": "1=1", "outFields": fields, "outSR": "4326",
+        "returnGeometry": "true", "f": "geojson",
     }
-    last_error = None
-    for attempt in range(3):
+    try:
+        result, fetched_url = request_json(query, bulk, 90)
+        if result.get("type") == "FeatureCollection" and 25 <= len(result.get("features", [])) <= 50 and not result.get("exceededTransferLimit"):
+            return result["features"], fetched_url
+        raise RuntimeError("Bulk query returned incomplete polygon set")
+    except (requests.RequestException, ValueError, RuntimeError) as bulk_error:
+        print(f"IGAC bulk unavailable {url}: {str(bulk_error)[:220]}; trying object-ID queries", flush=True)
+
+    ids, ids_url = request_json(query, {"where": "1=1", "returnIdsOnly": "true", "f": "json"}, 35)
+    object_ids = ids.get("objectIds")
+    if not isinstance(object_ids, list) or not 25 <= len(object_ids) <= 50:
+        raise RuntimeError(f"Unexpected object ID count from {url}: {len(object_ids or [])}")
+    out = []
+    for obj in sorted(object_ids):
+        record, record_url = request_json(query, {
+            "objectIds": str(obj), "outFields": fields, "outSR": "4326",
+            "returnGeometry": "true", "f": "geojson",
+        }, 75)
+        if record.get("type") != "FeatureCollection" or len(record.get("features", [])) != 1:
+            raise RuntimeError(f"Invalid/empty feature response for ID {obj} in {url}")
+        out.extend(record["features"])
+    return out, ids_url
+
+
+def get_igac_features():
+    """Official primary IGAC preferred, unverified mirror is explicit fallback.
+
+    No fallback changes the release gate: these are administrative polygons,
+    NOT certified shoreline or small-island territory boundaries.
+    """
+    failures = []
+    for service_url, source_class in IGAC_ALTERNATES:
         try:
-            resp = requests.get(IGAC_SERVICE + "/query", params=args,
-                                timeout=(25, 150),
-                                headers={"User-Agent": "ColombiaTransit-terrain-source-scope-research/1.0"})
-            resp.raise_for_status()
-            payload = resp.json()
-            if "error" in payload:
-                raise RuntimeError(f"IGAC ArcGIS error: {str(payload['error'])[:350]}")
-            if payload.get("type") != "FeatureCollection":
-                raise RuntimeError(f"IGAC did not serve GeoJSON, keys {list(payload)[:8]}")
-            features = payload.get("features", [])
+            features, metadata_url = get_service_features(service_url)
             if not 25 <= len(features) <= 50:
-                raise RuntimeError(f"Unexpected department polygon count {len(features)}; fail closed")
-            if payload.get("exceededTransferLimit"):
-                raise RuntimeError("IGAC pagination needed: failed closed")
-            shapes = []
-            names = []
-            for f in features:
-                g = shape(f.get("geometry"))
+                raise RuntimeError("Missing department polygons")
+            shapes, names = [], []
+            for feature in features:
+                geometry = feature.get("geometry")
+                if not geometry:
+                    raise RuntimeError("Department without geometry")
+                g = shape(geometry)
                 if g.is_empty or g.geom_type not in ("Polygon", "MultiPolygon") or not g.is_valid:
-                    raise RuntimeError(f"Invalid IGAC departmental polygon {f.get('properties')}")
-                if not (-90 < g.bounds[0] < -60 and -90 < g.bounds[2] < -60 and -7 < g.bounds[1] < 20 and -7 < g.bounds[3] < 20):
-                    raise RuntimeError(f"IGAC CRS or coordinates unexpected: {g.bounds}")
+                    raise RuntimeError(f"Invalid polygon: {feature.get('properties')}")
+                if not (-90 < g.bounds[0] < -60 and -90 < g.bounds[2] < -60
+                        and -7 < g.bounds[1] < 20 and -7 < g.bounds[3] < 20):
+                    raise RuntimeError(f"Suspicious projection or coordinates: {g.bounds}")
                 shapes.append(g)
-                props = f.get("properties") or {}
+                props = feature.get("properties") or {}
                 names.append(str(props.get("DeNombre") or "unknown"))
             if not any(g.covers(Point(-74.072, 4.711)) for g in shapes):
-                raise RuntimeError("IGAC EPSG:4326 output fails Bogota sanity check")
-            return shapes, names, resp.url
-        except (requests.RequestException, ValueError, RuntimeError) as err:
-            last_error = err
-            if attempt < 2:
-                time.sleep(2**attempt)
-    raise RuntimeError(f"IGAC polygons unavailable or unverified; cannot assign official land scope: {last_error}")
+                raise RuntimeError("Country EPSG:4326 sanity check failed at Bogota")
+            print(f"Accepted {len(shapes)} departmental polygons from {source_class}; "
+                  "geometry does NOT authorize coastline decisions", flush=True)
+            return shapes, names, metadata_url, source_class, failures
+        except (requests.RequestException, ValueError, RuntimeError) as error:
+            failures.append({"service_url": service_url, "error": str(error)[:400]})
+            print(f"IGAC source unavailable: {service_url}: {str(error)[:240]}", flush=True)
+    raise RuntimeError(
+        "No usable official administrative polygon or fallback mirror; fail closed: "
+        + json.dumps(failures))
 
 
 def positive_polygon_overlap(a, b):
@@ -194,7 +239,7 @@ def main():
     args = p.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
     all_rows, z13, gaps, names = load_incomplete_rows(args.input)
-    polygons, dept_names, metadata_url = get_igac_features()
+    polygons, dept_names, metadata_url, source_class, failed_sources = get_igac_features()
     rankings, counts = screen(z13, gaps, names, polygons, dept_names)
     sorted_rank = sorted(rankings.values(), key=lambda a: (
         a["screening_tier"], -a["z13_tiles_with_igac_and_candidate_cell_contact"],
@@ -211,6 +256,9 @@ def main():
         "z13_ne_only_land_gap_tiles": len(gaps),
         "igac_source": metadata_url,
         "igac_layer": IGAC_SERVICE,
+        "polygon_service_class": source_class,
+        "polygon_service_is_direct_official_IGAC": source_class.startswith("official_IGAC"),
+        "failed_preferred_sources": failed_sources,
         "igac_polygon_count": len(polygons),
         "igac_department_names": sorted(set(dept_names)),
         "screening_tiers": tiers,

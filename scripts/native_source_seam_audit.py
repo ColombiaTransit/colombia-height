@@ -59,10 +59,14 @@ def sample_strips(south,north,lon,lat=BORDER_LAT,rows=INTERIOR_ROWS):
         raise ValueError("Different source resolution; needs separate alignment")
     lon=np.asarray(lon,dtype=float)
     strips=[]
-    for dataset,sign,res in ((south,-1,sy),(north,1,ny)):
+    # Copernicus pixel *extents* may stop half a pixel short of
+    # the nominal integer-degree boundary. Sample the actual edge rows
+    # rather than assuming the georeferenced pixels span exactly 6.0.
+    for dataset,edge,direction,res in ((south,south.bounds.top,-1,sy),
+                                       (north,north.bounds.bottom,1,ny)):
         rowarrays=[]
         for k in range(rows):
-            coords=[(float(x),lat+sign*(k+.5)*res) for x in lon]
+            coords=[(float(x),edge+direction*(k+.5)*res) for x in lon]
             samples=list(dataset.sample(coords,masked=True))
             a=np.ma.array(samples).reshape(-1)
             rowarrays.append(np.ma.filled(a.astype(np.float64),np.nan))
@@ -84,8 +88,10 @@ def inspect_cell(cell,cache):
         paths.append(path)
     with rasterio.open(paths[0]) as s,rasterio.open(paths[1]) as n:
         lon=np.linspace(cell+.08,cell+.92,SAMPLES)
-        if not(s.bounds.top>=BORDER_LAT and n.bounds.bottom<=BORDER_LAT):
-            raise ValueError("Unexpected source latitude edges")
+        if (abs(s.bounds.top-BORDER_LAT)>3*abs(s.transform.e) or
+                abs(n.bounds.bottom-BORDER_LAT)>3*abs(n.transform.e)):
+            raise ValueError(f"Unexpected native COG edge offsets: south.top={s.bounds.top}, north.bottom={n.bounds.bottom}")
+        print(f"Native latitude edges: south.top={s.bounds.top}, north.bottom={n.bounds.bottom}",flush=True)
         southern,northern,res=sample_strips(s,n,lon)
         result=seam_metrics(southern,northern)
         result.update({
@@ -93,6 +99,9 @@ def inspect_cell(cell,cache):
             "source_south":south_info["name"],"source_north":north_info["name"],
             "source_native_resolution_deg":res,
             "approx_native_lat_step_m":round(res*111132,2),
+            "south_source_northern_edge_lat":s.bounds.top,
+            "north_source_southern_edge_lat":n.bounds.bottom,
+            "native_source_footprint_gap_m":round((n.bounds.bottom-s.bounds.top)*111132,3),
             "extreme_examples":[
                 {"lon":round(float(lon[i]),6),
                  "south_border_height_m":round(float(southern[0,i]),3),

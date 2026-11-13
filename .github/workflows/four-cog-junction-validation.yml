@@ -1,6 +1,9 @@
 name: Four Copernicus COG Source Junction QA
 
 on:
+  push:
+    paths:
+      - '.github/workflows/four-cog-junction-validation.yml'
   workflow_dispatch:
     inputs:
       maxzoom:
@@ -30,7 +33,7 @@ jobs:
       - name: Check disk before run
         run: df -h .
       - name: Render four quadrant batches with native Copernicus COGs
-        run: python scripts/four_cog_seam_pilot.py --maxzoom ${{ inputs.maxzoom }} --output output/four-cog
+        run: python scripts/four_cog_seam_pilot.py --maxzoom ${{ inputs.maxzoom || '11' }} --output output/four-cog
       - name: Validate source junction and both batch-edge orientations
         run: |
           python - <<'PY'

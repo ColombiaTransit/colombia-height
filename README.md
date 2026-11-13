@@ -2,9 +2,24 @@
 
 Reproducible inventory and preparation of **Copernicus DEM GLO-30** elevation data for Colombia, intended for self-hosted terrain maps (e.g. TileServer GL / MapLibre).
 
-## Status
+## Current status (13 November 2026)
 
-Phase 1: **inventory only**. No DEM source files or large MBTiles are committed to git. The inventory workflow can be started manually from GitHub Actions, and produces a CSV manifest and JSON summary.
+**Research and validation — not published**. The selected source inventory is
+137 Copernicus GLO-30 COGs (~5.184 GiB). A completed national native-pixel
+coverage scan of 96,751 z0–13 candidate tiles found **92,973 fully covered**
+and **3,778 partially covered**. All 32 geographic shards reconciled with
+unique XYZ IDs: [successful run #43435820259](https://github.com/ColombiaTransit/colombia-height/actions/runs/43435820259).
+
+Regional, two-COG and four-COG pilot seam validation succeeded, but
+**countrywide terrain generation and publication are not authorized**.
+DEM coverage does not imply Colombian land jurisdiction; missing DEM values
+must not be replaced with 0 m or artificial -10000 m bathymetry.
+
+The next step is the [land-reference validation](docs/national-land-coverage.md):
+first a **36-tile pilot** across Tumaco, San Andrés, Providencia, Malpelo;
+then optionally a separately dispatched full 32-shard land-reference audit.
+Its polygon sources are provisional and are **not** an official ocean mask.
+Every intermediate artifact has short retention; no permanent Releases exist.
 
 ## Source and attribution
 
@@ -30,11 +45,13 @@ python scripts/inventory.py --output output/
 
 The script does **not** download GeoTIFF content. The full dataset download and terrain RGB conversion will be designed after examining the inventory and available runner disk space.
 
-## Planned stages
+## Validation stages
 
-1. Inventory and verify coverage, counts, file sizes
-2. Download and process selected regional batches (without exhausting GitHub-hosted runner storage)
-3. Generate and validate Mapbox Terrain-RGB tiles
-4. Generate optional contours, benchmark MBTiles sizes and publication strategy
+1. Source COG inventory and island probes — completed for the selected 137 COGs.
+2. Small/medium region Terrain-RGB and seam pilots — passed for tested areas.
+3. National native-DEM pixel coverage registry — completed, 96,751 candidates.
+4. Reference land/shoreline and island-gap classification — in progress.
+5. Confirm official land/island scope, missing-land policy, systematic edge QA.
+6. Only after quality gates: generate, validate and consider publishing national Terrain-RGB MBTiles.
 
 Keep generated GeoTIFF, MBTiles, and release assets outside git.

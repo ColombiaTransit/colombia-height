@@ -1,0 +1,65 @@
+name: Compare Unselected Copernicus Coastal COGs
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/compare-unselected-coastal-cogs.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 95
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install existing DEM polygon dependencies
+        run: python -m pip install -r requirements-terrain.txt -r requirements-island-inventory.txt
+      - name: Regressions: preserve native heights, never infer sea from land-reference absence
+        run: python -m unittest discover -s tests -v
+      - name: Regenerate exact 137-COG selected manifest
+        run: |
+          python scripts/inventory.py --output output --workers 8
+          python scripts/extend_inventory.py --inventory output --islands data/colombia-island-probes.json
+          python - <<'PY'
+          import csv
+          from pathlib import Path
+          with (Path("output") / "colombia_dem_manifest_extended.csv").open(newline="") as f:
+              sources=list(csv.DictReader(f))
+          assert len(sources)==137 and len({x["name"] for x in sources})==137
+          assert all(x["status"]=="ok" for x in sources)
+          print("Original study inventory frozen at 137 selected COGs")
+          PY
+      - name: Compare true native DEM masks against two unselected public COGs
+        run: python scripts/source_scope_comparison.py --manifest output/colombia_dem_manifest_extended.csv --output output/source-scope-comparison
+      - name: Verify controlled comparison and refuse publication
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path("output/source-scope-comparison/unselected-cog-gap-comparison.json")
+          report=json.loads(p.read_text())
+          assert report["baseline_source_cog_count"]==137
+          assert report["tiles_checked"]==18
+          assert set(report["site_summaries"])=={"tumaco","malpelo"}
+          assert all(s["tiles_tested"]==9 for s in report["site_summaries"].values())
+          assert not report["national_publication_allowed"]
+          assert report["baseline_manifest_modified"] is False
+          assert all(a["max_original_valid_height_difference_m"]<=.001 for a in report["tile_records"])
+          print("Confirmed source-scope recovery summary:",json.dumps(report["site_summaries"],indent=2))
+          print("No COG added to national manifest, no missing height filled artificially")
+          PY
+      - name: Upload report only (native COGs stay on transient runner)
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: colombia-unselected-coastal-cogs-diagnostic
+          path: output/source-scope-comparison/unselected-cog-gap-comparison.json
+          if-no-files-found: error
+          retention-days: 1

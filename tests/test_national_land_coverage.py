@@ -75,6 +75,15 @@ class NationalLandCoverageTests(unittest.TestCase):
         self.assertEqual(len(refs.ne), 1)
         self.assertTrue(refs.ne[0].covers(colombia.representative_point()))
 
+    def test_study_envelope_clips_border_reference_geometry(self):
+        # Do not bring unrelated islands/land west of -84 into zoom-0 QA.
+        colombia = box(-80, 0, -79, 1)
+        crossing = box(-85, 0, -83, 1)
+        refs = References(colombia, [crossing], "test", "test")
+        self.assertEqual(len(refs.ne), 1)
+        self.assertAlmostEqual(refs.ne[0].bounds[0], -84.0)
+        self.assertAlmostEqual(refs.ne[0].bounds[2], -83.0)
+
     def test_unselected_cog_detection_does_not_expand_manifest(self):
         missing = np.zeros((256, 256), bool)
         missing[0, 0] = True

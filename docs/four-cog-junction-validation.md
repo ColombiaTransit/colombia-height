@@ -6,10 +6,10 @@ junction** at 74° W / 6° N, covering four different Copernicus DEM GLO-30
 source cells: N05/N06 × W075/W074.
 
 The actual Web Mercator test bounds follow z10 x=299..303,
-y=492..496, enclosing approximately 1.76×1.74 degrees around that
-junction. Four independently processed batches divide this 5×5 z10
+y=493..496, enclosing approximately 1.76×1.41 degrees around that
+junction. Four independently processed batches divide this 5×4 z10
 parent grid into northwest/northeast/southwest/southeast quadrants.
-At default zoom 10–11, the planned tiles are 25+100 = **125**.
+At default zoom 10–11, the planned tiles are 20+80 = **100**.
 
 ## Validation
 

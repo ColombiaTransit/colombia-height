@@ -220,6 +220,7 @@ def scan(manifest, output, mode="pilot", shard=None):
     report_path = output / ("land-pilot-summary.json" if mode == "pilot"
                             else f"land-summary-{shard:02d}.json")
     opened = {}
+    (output / "source-cache").mkdir(exist_ok=True)
     total = 0
     dem_status = Counter()
     missing_stats = Counter()

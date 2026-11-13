@@ -23,6 +23,7 @@ PREFIXES = (
     "colombia-coastal-terrain-pilot",
     "colombia-antioquia-seam-validation",
     "colombia-two-cog-seam-validation",
+    "colombia-four-cog-junction-validation",
 )
 API = "https://api.github.com"
 

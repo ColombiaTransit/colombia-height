@@ -1,4 +1,5 @@
 name: Resolve Native Source Seam and Tumaco Gap
+# Independent checks; native COG half-pixel edge offsets are expected.
 
 on:
   push:

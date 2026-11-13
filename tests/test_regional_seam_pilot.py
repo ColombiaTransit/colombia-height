@@ -7,10 +7,12 @@ from pathlib import Path
 
 import numpy as np
 from PIL import Image
+import rasterio
+from rasterio.transform import from_origin
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"scripts"))
 from regional_seam_pilot import (
     BATCH_BASE_X, BASE_Y, bounds_for_base, decode_png,
-    seam_pairs, tile_list, check_seams,
+    seam_pairs, tile_list, check_seams, load_native_cog, warp_tile,
 )
 from medellin_terrain import rgb_encode
 
@@ -34,6 +36,30 @@ class RegionalSeamTests(unittest.TestCase):
             for _,a,b in pairs:
                 self.assertEqual(b[1],a[1]+1)
                 self.assertEqual(b[2],a[2])
+    def test_native_source_grid_reused_without_crop_resampling(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path=Path(directory)/"synthetic-copernicus.tif"
+            yy,xx=np.indices((256,256))
+            values=(250 + xx*.22 + yy*.12).astype(np.float32)
+            affine=from_origin(-76,7,1/256,1/256)
+            with rasterio.open(path,"w",driver="GTiff",height=256,width=256,
+                               count=1,dtype="float32",transform=affine,
+                               crs="EPSG:4326",nodata=-32767.0) as dst:
+                dst.write(values,1)
+            a,transform,nodata=load_native_cog([path])
+            b,transform2,nodata2=load_native_cog([path])
+            self.assertEqual(transform,affine)
+            self.assertEqual(transform2,affine)
+            self.assertEqual(nodata,-32767.0)
+            self.assertEqual(nodata2,nodata)
+            sample_a=warp_tile(a,transform,(11,595,987),src_nodata=nodata)
+            sample_b=warp_tile(b,transform2,(11,595,987),src_nodata=nodata2)
+            self.assertTrue(np.all(np.isfinite(sample_a)))
+            self.assertTrue(np.all(sample_a!=-9999))
+            self.assertTrue(np.array_equal(sample_a,sample_b))
+    def test_native_loader_rejects_multiple_cogs_in_pilot(self):
+        with self.assertRaisesRegex(RuntimeError,"exactly one"):
+            load_native_cog([Path("a.tif"),Path("b.tif")])
     def test_height_rgb_encoding_roundtrip(self):
         values=np.array([[-1.2,0.0,10.15],[2000.0,5.5,123.4]],dtype=np.float32)
         raw=rgb_encode(values)

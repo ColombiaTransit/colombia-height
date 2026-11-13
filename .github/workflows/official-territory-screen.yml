@@ -46,6 +46,9 @@ jobs:
           assert r["z13_incomplete_tiles"]==1917
           assert r["z13_ne_only_land_gap_tiles"]==1004
           assert r["source_manifest_changes"]==0
+          assert r["polygon_service_class"] in ("official_IGAC_primary", "official_IGAC_alternate", "public_IGAC_labelled_hosted_copy_UNVERIFIED")
+          if not r["polygon_service_is_direct_official_IGAC"]:
+              print("CAUTION: official IGAC service unavailable; mirror is unverified, no boundary approval")
           assert r["national_publication_allowed"] is False
           assert sum(r["screening_tiers"].values())==52
           assert all(v["approval_status"].startswith("NOT_APPROVED")

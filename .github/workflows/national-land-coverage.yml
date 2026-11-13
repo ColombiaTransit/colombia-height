@@ -47,9 +47,11 @@ jobs:
           assert all(r["status"]=="ok" for r in rows)
           print("Verified selected 137 Copernicus COGs; excluded Quitasueño")
           PY
+      # Only this explicit, traceable full-scan commit launches nationwide
+      # mode on push; routine source changes remain inexpensive pilot-only.
       - id: mode
         env:
-          MODE: ${{ github.event_name == 'push' && 'pilot' || inputs.mode }}
+          MODE: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[national-land-full-20261113]') && 'full' || github.event_name == 'push' && 'pilot' || inputs.mode }}
         run: |
           if [ "$MODE" = full ]; then echo "full=true" >> "$GITHUB_OUTPUT"; else echo "full=false" >> "$GITHUB_OUTPUT"; fi
       - uses: actions/upload-artifact@v4

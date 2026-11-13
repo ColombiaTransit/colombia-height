@@ -78,6 +78,25 @@ class NationalLandCoverageTests(unittest.TestCase):
         self.assertEqual(catalog_candidates(missing, lon, lat, catalog, set(), 8), [])
         self.assertEqual(catalog_candidates(np.zeros_like(missing), lon, lat, catalog, set(), 11), [])
 
+    def test_unmapped_missing_dem_pixels_still_require_review(self):
+        # Missing DEM outside BOTH references is an unresolved policy case,
+        # never silently accepted as ocean or an approved output tile.
+        from unittest.mock import MagicMock
+        from national_land_coverage import inspect
+        valid = np.zeros((256, 256), dtype=bool)
+        refs = MagicMock()
+        refs.masks.return_value = (
+            valid, valid, np.full(valid.shape, -79.2), np.full(valid.shape, 1.5))
+        fake_result = {"coverage": "no_dem_coverage",
+                       "valid_pixels": 0, "missing_pixels": 65536}
+        with patch("national_land_coverage.assess_tile", return_value=(fake_result, [], 0)), \
+             patch("national_land_coverage.intersecting_source_indices", return_value=[]):
+            row, status = inspect([], {}, Path("."), refs, {}, set(), (11, 0, 0))
+        self.assertEqual(status, "no_dem_coverage")
+        self.assertTrue(row["requires_review"])
+        self.assertTrue(row["outside_both_reference_status_unknown"])
+        self.assertFalse(row["possible_missing_reference_land"])
+
     def test_reconcile_rejects_missing_shards(self):
         with tempfile.TemporaryDirectory() as d:
             with self.assertRaisesRegex(AssertionError, "32"):

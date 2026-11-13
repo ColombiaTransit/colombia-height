@@ -185,12 +185,9 @@ def inspect(sources, opened, cache, references, catalog, selected_cells,
         "missing_outside_selected_degree_cells": int(np.count_nonzero(missing & outside_source_cell)),
         "unselected_public_cogs_at_missing_pixels": extra,
         **counts,
-        "requires_review": bool(
-            counts["missing_both_land_references"]
-            or counts["missing_geoboundaries_only"]
-            or counts["missing_natural_earth_only"]
-            or extra
-        ),
+        "possible_missing_reference_land": bool(sum(counts[k] for k in CATEGORIES[:3])),
+        "outside_both_reference_status_unknown": bool(counts["missing_outside_both_references"]),
+        "requires_review": bool(result["missing_pixels"]),
     }
     return row, result["coverage"]
 
@@ -226,6 +223,7 @@ def scan(manifest, output, mode="pilot", shard=None):
     missing_stats = Counter()
     sites = {}
     review_count = 0
+    review_reasons = Counter()
     omitted = set()
     try:
         with gzip.open(rows, "wt", encoding="utf-8", compresslevel=6) as stream:
@@ -254,6 +252,9 @@ def scan(manifest, output, mode="pilot", shard=None):
                 for key in CATEGORIES:
                     missing_stats[key] += record[key]
                 review_count += int(record["requires_review"])
+                review_reasons["land_reference_missing_candidate_tiles"] += int(record["possible_missing_reference_land"])
+                review_reasons["unknown_outside_both_reference_tiles"] += int(record["outside_both_reference_status_unknown"])
+                review_reasons["unselected_public_cog_candidate_tiles"] += int(bool(record["unselected_public_cogs_at_missing_pixels"]))
                 omitted.update(record["unselected_public_cogs_at_missing_pixels"])
                 stream.write(json.dumps(record, sort_keys=True, separators=(",", ":")) + "\n")
                 if total % 1000 == 0:
@@ -273,6 +274,7 @@ def scan(manifest, output, mode="pilot", shard=None):
         "dem_coverage_counts": dict(dem_status),
         "missing_pixel_reference_categories": dict(missing_stats),
         "tiles_requiring_review": review_count,
+        "review_reasons": dict(review_reasons),
         "unselected_public_cogs_at_missing_pixels": sorted(omitted),
         "pilot_sites": sites if mode == "pilot" else None,
         "geoBoundaries_url": references.url,
@@ -305,6 +307,7 @@ def reconcile(root, output):
     outside_sources = set()
     total = 0
     review = 0
+    review_reasons = Counter()
     for shard in range(32):
         summary = json.loads((Path(root) / f"land-summary-{shard:02d}.json").read_text())
         if summary["mode"] != "full" or summary["shard"] != shard or not summary["complete"]:
@@ -314,6 +317,7 @@ def reconcile(root, output):
         total += summary["tiles_checked"]
         coverage.update(summary["dem_coverage_counts"])
         review += summary["tiles_requiring_review"]
+        review_reasons.update(summary.get("review_reasons", {}))
         outside_sources.update(summary["unselected_public_cogs_at_missing_pixels"])
         with gzip.open(Path(root) / f"land-shard-{shard:02d}.ndjson.gz", "rt", encoding="utf-8") as stream:
             local = Counter()
@@ -342,6 +346,7 @@ def reconcile(root, output):
         "coverage_counts": dict(coverage),
         "missing_pixel_reference_categories": dict(categories),
         "tiles_requiring_review": review,
+        "review_reasons": dict(review_reasons),
         "unselected_public_cogs_at_missing_pixels": sorted(outside_sources),
         "all_32_shards_present": True, "unique_partial_xyz": True,
         "national_publication_allowed": False,

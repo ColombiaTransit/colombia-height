@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Independent adjoining regional Terrain-RGB batches with seam QA.
 
-Two adjacent z11-column regions have separate DEM mosaics and MBTiles.
-A separate reference mosaic covering their union checks boundary pixel
-samples. Natural real-world slopes are reported, not forced to zero.
-No permanent release is created.
+This pilot deliberately uses ONE source COG on its native raster grid:
+independently cut mosaics previously caused an unverified ~0.9m seam error.
+Both batches render distinct Web Mercator tiles from native DEM pixels.
+The reference reads the original source separately; multi-COG seams require
+a separate follow-up pilot. No permanent release is created.
 """
 import argparse
 import io
@@ -16,13 +17,14 @@ from pathlib import Path
 
 import mercantile
 import numpy as np
+import rasterio
 from PIL import Image
 from rasterio.enums import Resampling
 from rasterio.transform import from_bounds
 from rasterio.warp import reproject
 
 from medellin_terrain import NODATA, TILE_SIZE
-from strict_terrain import build_raster, encode_tile, prepare_sources
+from strict_terrain import encode_tile, prepare_sources
 from merge_regions import merge_mbtiles
 
 # Z11 4x2 inland Antioquia tiles, split at x=595. Two batches both cross
@@ -42,19 +44,26 @@ def tile_list(xs, ys, zoom):
             for yy in ys for y in range(yy*factor,(yy+1)*factor)
             for xx in xs for x in range(xx*factor,(xx+1)*factor)]
 
-def global_aligned_mosaic_bounds(bbox):
-    """Anchor geographic mosaic sampling to integer 1-arcsecond parallels.
+def load_native_cog(paths):
+    """Read untouched source raster with its *native* affine and nodata mask.
 
-    Independent batches otherwise use different subpixel sample origins,
-    producing artificial cross-batch seam discrepancies.
+    A clipped rasterio.merge() mosaic can resample the same source DEM
+    differently for east/west batches. This pilot checks seam ownership
+    without that intermediate interpolation. Multi-COG stitching is an
+    explicitly separate validation task and fails closed here.
     """
-    step=3600
-    return (math.floor(bbox[0]*step)/step,
-            math.floor(bbox[1]*step)/step,
-            math.ceil(bbox[2]*step)/step,
-            math.ceil(bbox[3]*step)/step)
+    if len(paths)!=1:
+        raise RuntimeError(
+            f"Native-grid seam pilot requires exactly one source COG, got {len(paths)}; "
+            "multi-COG seam test still required"
+        )
+    with rasterio.open(paths[0]) as src:
+        if src.count!=1 or src.crs is None or src.crs.to_epsg()!=4326:
+            raise ValueError("Source COG must be one band in EPSG:4326")
+        return src.read(1).astype(np.float32,copy=False), src.transform, src.nodata
 
-def warp_tile(dem, src_transform, tile, width=TILE_SIZE, height=TILE_SIZE, region_bounds=None):
+def warp_tile(dem, src_transform, tile, width=TILE_SIZE, height=TILE_SIZE,
+              region_bounds=None, src_nodata=NODATA):
     z,x,y=tile
     b=mercantile.xy_bounds(x,y,z)
     if region_bounds is None:
@@ -64,7 +73,7 @@ def warp_tile(dem, src_transform, tile, width=TILE_SIZE, height=TILE_SIZE, regio
     out=np.full((height,width),NODATA,dtype=np.float32)
     reproject(
         source=dem,destination=out,
-        src_transform=src_transform,src_crs="EPSG:4326",src_nodata=NODATA,
+        src_transform=src_transform,src_crs="EPSG:4326",src_nodata=src_nodata,
         dst_transform=from_bounds(*projected,width,height),
         dst_crs="EPSG:3857",dst_nodata=NODATA,
         resampling=Resampling.bilinear,num_threads=2,
@@ -84,9 +93,8 @@ def render_batch(output, name, minzoom, maxzoom):
     root=output/name
     root.mkdir(parents=True,exist_ok=True)
     entries,paths=prepare_sources(bbox,output/"source-cache")
-    pad=2/3600
-    padded=(bbox[0]-pad,bbox[1]-pad,bbox[2]+pad,bbox[3]+pad)
-    dem,tform=build_raster(paths,global_aligned_mosaic_bounds(padded))
+    dem,tform,nodata=load_native_cog(paths)
+    print(f"{name}: rendering from native COG grid; transform={tuple(tform)} nodata={nodata}",flush=True)
     path=root/(name+".mbtiles")
     path.unlink(missing_ok=True)
     db=sqlite3.connect(path)
@@ -104,7 +112,7 @@ def render_batch(output, name, minzoom, maxzoom):
         for z in range(minzoom,maxzoom+1):
             count=0
             for tile in tile_list(xs,BASE_Y,z):
-                heights=warp_tile(dem,tform,tile)
+                heights=warp_tile(dem,tform,tile,src_nodata=nodata)
                 png,_=encode_tile(heights,strict=True)
                 _,x,y=tile
                 db.execute("INSERT INTO tiles VALUES (?,?,?,?)",
@@ -121,16 +129,14 @@ def render_batch(output, name, minzoom, maxzoom):
     db.close()
     return {"name":name,"bounds":bbox,"mbtiles":str(path),
             "counts":counts,"source_tiles":[x["name"] for x in entries],
+            "raster_sampling":"native_COG_no_clipped_mosaic",
             "source_download_bytes":sum(p.stat().st_size for p in paths),
             "bytes":path.stat().st_size}
 
 def union_sources(output):
     bbox=bounds_for_base(tuple(x for xs in BATCH_BASE_X.values() for x in xs))
     entries,paths=prepare_sources(bbox,output/"source-cache")
-    pad=2/3600
-    padded=(bbox[0]-pad,bbox[1]-pad,bbox[2]+pad,bbox[3]+pad)
-    dem,tform=build_raster(paths,padded)
-    return dem,tform
+    return load_native_cog(paths)
 
 def max_error(a,b):
     return float(np.max(np.abs(a-b)))
@@ -149,7 +155,7 @@ def seam_pairs(z):
     for y in range(min(BASE_Y)*factor,(max(BASE_Y)+1)*factor):
         yield ("vertical",(z,boundary_x-1,y),(z,boundary_x,y))
 
-def check_seams(west,east,dem,tform,minzoom,maxzoom):
+def check_seams(west,east,dem,tform,nodata,minzoom,maxzoom):
     report={}
     seam_count=0
     with sqlite3.connect(f"file:{Path(west).resolve()}?mode=ro",uri=True) as wa,sqlite3.connect(f"file:{Path(east).resolve()}?mode=ro",uri=True) as eb:
@@ -169,19 +175,22 @@ def check_seams(west,east,dem,tform,minzoom,maxzoom):
                 # A single 512x256 GDAL warp has a different approximation
                 # grid and can introduce ~metre-scale discrepancies on slopes
                 # even if the underlying DEM is perfectly aligned.
-                ref_left=warp_tile(dem,tform,a)
-                ref_right=warp_tile(dem,tform,b)
+                ref_left=warp_tile(dem,tform,a,src_nodata=nodata)
+                ref_right=warp_tile(dem,tform,b,src_nodata=nodata)
                 if (not np.isfinite(ref_left).all() or not np.isfinite(ref_right).all()
                         or np.any(ref_left==NODATA) or np.any(ref_right==NODATA)):
                     raise ValueError("Reference DEM invalid at seam")
                 left_error=max_error(left,ref_left)
                 right_error=max_error(right,ref_right)
                 error=max(left_error,right_error)
-                # Reprojection of the same DEM at adjacent slippy tile
-                # centers must agree with independent 512px seam reference
-                # to the Terrain-RGB quantization tolerance (+ float jitter).
+                # Native-grid reference on identical 256px tile grids.
+                # Tolerance covers 0.1m RGB quantization and float jitter.
                 if error>0.16:
-                    raise AssertionError(f"Seam reference mismatch {z}/{ax}/{ay} -> {z}/{bx}/{by}: {error:.3f}m")
+                    raise AssertionError(
+                        f"Seam reference mismatch {z}/{ax}/{ay} -> {z}/{bx}/{by}: "
+                        f"{error:.3f}m (left={left_error:.3f}, right={right_error:.3f}); "
+                        "native-source rendering should not differ beyond RGB quantization"
+                    )
                 gap=np.abs(left[:,-1]-right[:,0])
                 left_inside=np.abs(left[:,-2]-left[:,-1])
                 right_inside=np.abs(right[:,0]-right[:,1])
@@ -221,15 +230,15 @@ def main():
     merge=merge_mbtiles([b["mbtiles"] for b in batches],merged)
     expected=sum(sum(b["counts"].values()) for b in batches)
     merged_count=verify_merged(merged,expected)
-    dem,tform=union_sources(args.output)
-    seams=check_seams(batches[0]["mbtiles"],batches[1]["mbtiles"],dem,tform,BASE_Z,args.maxzoom)
+    dem,tform,nodata=union_sources(args.output)
+    seams=check_seams(batches[0]["mbtiles"],batches[1]["mbtiles"],dem,tform,nodata,BASE_Z,args.maxzoom)
     report={
         "status":"regional_seam_pilot_validated",
         "bbox":bounds_for_base((593,594,595,596)),
         "zoom_min":BASE_Z,"zoom_max":args.maxzoom,
         "batches":batches,"merged":merge,"merged_tile_count":merged_count,
         "seams":seams,
-        "limitations":["Independent source mosaics validated only for bounded inland Antioquia",
+        "limitations":["Independent batch rendering tested using the SAME native single-COG source; multi-COG raster stitching is not yet tested",
                        "This is not a national coastline/ocean-mask test",
                        "High slope gradients are descriptive; no arbitrary maximum jump threshold",
                        "No permanent GitHub release or national MBTiles produced"]

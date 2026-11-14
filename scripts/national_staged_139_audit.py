@@ -85,8 +85,9 @@ def read_original_national_shards(root):
                     raise AssertionError(f"Original unique XYZ/shard provenance violated {key}")
                 valid=row["valid_dem_pixels"]
                 missing=row["missing_dem_pixels"]
-                if valid+missing!=PIXLEN or row["dem_coverage"]!=classify_mask(
-                    np.arange(PIXLEN).reshape((256,256))<valid)["coverage"]:
+                expected_status=("full_dem_coverage" if valid==PIXLEN else
+                                 "no_dem_coverage" if valid==0 else "partial_dem_coverage")
+                if valid+missing!=PIXLEN or row["dem_coverage"]!=expected_status:
                     raise AssertionError("Original source coverage classification corrupt")
                 data[key]=valid
                 by_zoom[key[0]][row["dem_coverage"]]+=1
@@ -228,9 +229,8 @@ def compute_land_changes(original_osm,original_counts,affected,extras,
         if a["staged_valid_pixels"]==PIXLEN and a["new_scope"] is False and tile not in original_per:
             no_change_unrelated+=1
             continue
-        _,_,lon,lat=refs.masks(tile)
+        gb,ne,lon,lat=refs.masks(tile)
         landmask=osm.mask(tile,lon,lat)
-        gb,ne,_,_=refs.masks(tile)
         igacmask=igac.mask(tile,lon,lat) if igac_available else None
         if a["new_scope"]:
             # Entirely new candidate tiles (some sea; some valid real COG).

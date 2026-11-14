@@ -22,9 +22,11 @@ window.maplibregl=maplibregl;
 window.__mapErrors=[];
 window.__terrainReady=false;
 window.__loadedDemTiles=0;
+const requestedTiles=new URLSearchParams(window.location.search).get('tiles');
+const tileTemplate=requestedTiles || 'http://127.0.0.1:8765/tiles/{z}/{x}/{y}.png';
 const source = {
  type:'raster-dem',
- tiles:['http://127.0.0.1:8765/tiles/{z}/{x}/{y}.png'],
+ tiles:[tileTemplate],
  minzoom:11,maxzoom:13,tileSize:256,encoding:'mapbox',
  attribution:'Contains modified Copernicus DEM; © OpenStreetMap contributors'
 };

@@ -46,8 +46,8 @@ const out = process.env.MAPLIBRE_SMOKE_DIR || "output/maplibre-preview";
     if (!data.hasTerrain || !data.styleLoaded || !data.sourceReady || pngs.length < 2) {
       throw new Error("MapLibre renderer did not fully load genuine Terrain-RGB from local MBTiles");
     }
-    if (problems.length || data.errors.some(x => /WebGL|failed to compile|cannot read/i.test(x))) {
-      throw new Error("MapLibre browser emitted fatal WebGL/JS errors");
+    if (problems.length || data.errors.length) {
+      throw new Error("MapLibre browser must have ZERO DEM/JS/WebGL errors, including missing sea-tile dimension warnings");
     }
     if (data.centerTerrainHeightM === null || !Number.isFinite(data.centerTerrainHeightM)) {
       throw new Error("MapLibre queryTerrainElevation failed for center point");

@@ -142,7 +142,7 @@ def clip_split_polygons(shp, study_bbox=STUDY_BBOX):
 def write_clip(polygons, provenance, output):
     """Gzip newline-delimited WKB: one polygon per line, no third-party pickle."""
     output = Path(output)
-    output.parent.mkdir(parents=True, exist_ok=True)
+    output.mkdir(parents=True, exist_ok=True)
     ref = output / "osm-land-study.wkb.gz"
     with gzip.open(ref, "wt", encoding="ascii", compresslevel=6) as dest:
         for g in polygons:

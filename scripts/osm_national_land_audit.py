@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import numpy as np
+import requests
 from shapely import contains_xy
 from shapely.geometry import box, shape
 from shapely.ops import unary_union
@@ -66,10 +67,12 @@ def native_dem_mask(sources, opened, cache, tile):
 
 
 def exact_categories(valid, osm, igac, ne, gb):
-    """Missing DEM partition: OSM land and outside OSM always add to NoData."""
-    for mask in (valid, osm, igac, ne, gb):
+    """Exact missing DEM partition. Unknown IGAC must stay None, never zero."""
+    for mask in (valid, osm, ne, gb):
         if mask.shape != (256, 256):
             raise ValueError("Mismatched DEM or reference mask")
+    if igac is not None and igac.shape != (256, 256):
+        raise ValueError("Mismatched IGAC pixel mask")
     missing = ~valid
     land = missing & osm
     outside = missing & ~osm
@@ -77,22 +80,34 @@ def exact_categories(valid, osm, igac, ne, gb):
         "native_missing_dem_pixels": int(missing.sum()),
         "missing_inside_osm_land": int(land.sum()),
         "missing_outside_osm_land_UNKNOWN_not_confirmed_ocean": int(outside.sum()),
-        "missing_osm_land_and_igac_department": int(np.count_nonzero(land & igac)),
-        "missing_osm_land_outside_igac_department": int(np.count_nonzero(land & ~igac)),
+        "missing_osm_land_and_igac_department": None,
+        "missing_osm_land_outside_igac_department": None,
         "missing_osm_land_and_natural_earth": int(np.count_nonzero(land & ne)),
         "missing_osm_land_not_natural_earth": int(np.count_nonzero(land & ~ne)),
-        "missing_osm_land_outside_igac_and_natural_earth": int(np.count_nonzero(land & ~igac & ~ne)),
-        "missing_igac_but_not_osm": int(np.count_nonzero(missing & igac & ~osm)),
+        "missing_osm_land_outside_igac_and_natural_earth": None,
+        "missing_igac_but_not_osm": None,
         "missing_natural_earth_but_not_osm": int(np.count_nonzero(missing & ne & ~osm)),
         "missing_geoboundaries_but_not_osm": int(np.count_nonzero(missing & gb & ~osm)),
         "osm_reference_land_pixels": int(osm.sum()),
-        "osm_igac_reference_agreement_pixels": int(np.count_nonzero(osm & igac)),
+        "osm_igac_reference_agreement_pixels": None,
+        "igac_mask_available": igac is not None,
     }
+    if igac is not None:
+        values.update({
+            "missing_osm_land_and_igac_department": int(np.count_nonzero(land & igac)),
+            "missing_osm_land_outside_igac_department": int(np.count_nonzero(land & ~igac)),
+            "missing_osm_land_outside_igac_and_natural_earth": int(np.count_nonzero(land & ~igac & ~ne)),
+            "missing_igac_but_not_osm": int(np.count_nonzero(missing & igac & ~osm)),
+            "osm_igac_reference_agreement_pixels": int(np.count_nonzero(osm & igac)),
+        })
     if values["missing_inside_osm_land"] + values["missing_outside_osm_land_UNKNOWN_not_confirmed_ocean"] != values["native_missing_dem_pixels"]:
         raise AssertionError("OSM missing-pixel partition failed")
-    if values["missing_osm_land_and_igac_department"] + values["missing_osm_land_outside_igac_department"] != values["missing_inside_osm_land"]:
+    if igac is not None and (
+        values["missing_osm_land_and_igac_department"] +
+        values["missing_osm_land_outside_igac_department"] != values["missing_inside_osm_land"]):
         raise AssertionError("OSM+IGAC partition failed")
-    if values["missing_osm_land_and_natural_earth"] + values["missing_osm_land_not_natural_earth"] != values["missing_inside_osm_land"]:
+    if (values["missing_osm_land_and_natural_earth"] +
+        values["missing_osm_land_not_natural_earth"] != values["missing_inside_osm_land"]):
         raise AssertionError("OSM+Natural Earth partition failed")
     return values
 
@@ -113,7 +128,8 @@ def cell_pixel_counts(missing, osm, igac, lon, lat, tile_candidate_names):
         candidate_counts[name] = {
             "native_missing_pixel_cell_hits": int(missing_cell.sum()),
             "osm_land_missing_pixel_cell_hits": int(osm_cell.sum()),
-            "osm_land_and_igac_missing_pixel_cell_hits": int(np.count_nonzero(osm_cell & igac)),
+            "osm_land_and_igac_missing_pixel_cell_hits": (int(np.count_nonzero(osm_cell & igac)) if igac is not None else None),
+            "igac_mask_available": igac is not None,
             "outside_osm_missing_cell_hits_UNKNOWN": int(np.count_nonzero(missing_cell & ~osm)),
             "native_source_recovery_not_tested_here": True,
             "eligible_for_automatic_inclusion": False,
@@ -126,7 +142,7 @@ def cell_pixel_counts(missing, osm, igac, lon, lat, tile_candidate_names):
 
 
 def classify_candidate(entry):
-    if entry["osm_land_and_igac_missing_pixel_cell_hits"]:
+    if entry.get("igac_mask_available") and entry.get("osm_land_and_igac_missing_pixel_cell_hits"):
         return "A_osm_land_and_official_igac_agree_native_cog_recovery_REQUIRES_QA"
     if entry["osm_land_missing_pixel_cell_hits"]:
         return "B_osm_land_only_official_territory_and_cog_recovery_REQUIRES_QA"
@@ -143,12 +159,20 @@ def raster_reference_bundle(osm_path, osm_meta):
         raise RuntimeError("Clipped study bbox does not match audited bounds")
     osm = PolygonMask(load_clip(osm_path, metadata["reference_wkb_sha256"]))
     refs = load_references()
-    # STRICT direct official IGAC only; no unverified fallback.
-    features, source_url = get_service_features(IGAC_SERVICE)
-    if not 25 <= len(features) <= 50:
-        raise RuntimeError("Official IGAC service incomplete")
-    igac_geom = [shape(f["geometry"]) for f in features]
-    igac = PolygonMask(igac_geom)
+    # IGAC is optional contextual evidence. Its server has intermittently
+    # returned HTTP 503: that must not make an OSM-only audit unusable.
+    # Unknown IGAC is represented by None, NEVER a fake empty land mask.
+    igac, source_url = None, None
+    try:
+        features, url = get_service_features(IGAC_SERVICE)
+        if not 25 <= len(features) <= 50:
+            raise RuntimeError("Official IGAC service incomplete")
+        igac = PolygonMask([shape(f["geometry"]) for f in features])
+        source_url = url
+    except (requests.RequestException, ValueError, RuntimeError) as error:
+        print("OFFICIAL_IGAC_UNAVAILABLE: OSM+Natural Earth+geoBoundaries "
+              "comparison still valid; IGAC-only statistics will be NULL, not zero. "
+              + str(error)[:350], flush=True)
     return osm, refs, igac, source_url, metadata
 
 
@@ -157,7 +181,7 @@ def inspect_tile(sources, opened, cache, tile, osm, refs, igac,
     valid = native_dem_mask(sources, opened, cache, tile)
     gb, ne, lon, lat = refs.masks(tile)
     osm_mask = osm.mask(tile, lon, lat)
-    igac_mask = igac.mask(tile, lon, lat)
+    igac_mask = igac.mask(tile, lon, lat) if igac is not None else None
     counts = exact_categories(valid, osm_mask, igac_mask, ne, gb)
     if baseline is not None and counts["native_missing_dem_pixels"] != baseline["missing_dem_pixels"]:
         raise AssertionError(f"Original native DEM pixel mask has changed for {tile}")
@@ -178,7 +202,7 @@ def inspect_tile(sources, opened, cache, tile, osm, refs, igac,
 
 
 def accumulate(stats, row):
-    skip = {"z","x","y","site","was_in_baseline_natural_earth_gap_1004",
+    skip = {"z","x","y","site","igac_mask_available","was_in_baseline_natural_earth_gap_1004",
             "per_candidate_omitted_cog","osm_is_not_official_colombia_territory",
             "no_dem_heights_created_or_modified","national_publication_allowed"}
     for key,value in row.items():
@@ -186,7 +210,8 @@ def accumulate(stats, row):
             stats[key] += value
     stats["tiles"] += 1
     stats["tiles_with_native_missing_inside_osm_land"] += int(row["missing_inside_osm_land"]>0)
-    stats["tiles_with_osm_and_igac_missing"] += int(row["missing_osm_land_and_igac_department"]>0)
+    if row["igac_mask_available"]:
+        stats["tiles_with_osm_and_igac_missing"] += int(row["missing_osm_land_and_igac_department"]>0)
 
 
 def run(manifest, osm_path, osm_meta, output, mode="pilot", incomplete=None):
@@ -255,13 +280,14 @@ def run(manifest, osm_path, osm_meta, output, mode="pilot", incomplete=None):
                "z13_tiles_with_missing_pixel_in_this_cog_degree_cell":stats["z13_tiles_with_missing_pixel_in_this_cog_degree_cell"],
                "native_missing_pixel_cell_hits":stats["native_missing_pixel_cell_hits"],
                "osm_land_missing_pixel_cell_hits":stats["osm_land_missing_pixel_cell_hits"],
-               "osm_land_and_igac_missing_pixel_cell_hits":stats["osm_land_and_igac_missing_pixel_cell_hits"],
+               "osm_land_and_igac_missing_pixel_cell_hits":(stats["osm_land_and_igac_missing_pixel_cell_hits"] if igac is not None else None),
+               "igac_mask_available":igac is not None,
                "outside_osm_missing_cell_hits_UNKNOWN":stats["outside_osm_missing_cell_hits_UNKNOWN"],
                "review_tier":classify_candidate(stats),
                "source_promoted":False,"native_cog_recovery_not_measured":True}
         ranked.append(entry)
     ranked.sort(key=lambda x:(x["review_tier"],
-         -x["osm_land_and_igac_missing_pixel_cell_hits"],
+         -(x["osm_land_and_igac_missing_pixel_cell_hits"] or 0),
          -x["osm_land_missing_pixel_cell_hits"],x["name"]))
     report={
         "status":"OSM_native_DEM_land_reference_audit_complete",
@@ -278,6 +304,7 @@ def run(manifest, osm_path, osm_meta, output, mode="pilot", incomplete=None):
         "source_candidate_total":len(ranked),
         "candidate_sources_promoted":0,
         "official_IGAC_admin_source":official_url,
+        "official_IGAC_context_mask_status":("evaluated" if igac is not None else "unavailable_NULL_not_zero"),
         "OSM_land_polygon_reference":metadata.get("source"),
         "OSM_archive_sha256":metadata["archive"]["sha256"],
         "osm_clipped_reference_sha256":metadata["reference_wkb_sha256"],

@@ -5,6 +5,8 @@ on:
   push:
     paths:
       - '.github/workflows/verify-corrected-island-probes.yml'
+      - 'scripts/validate_corrected_island_probes.py'
+      - 'tests/test_validate_corrected_island_probes.py'
 
 permissions:
   contents: read

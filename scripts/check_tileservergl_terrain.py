@@ -57,7 +57,7 @@ def run(mbtiles,base_url):
         # the native 256x256 RGB elevation samples MUST remain identical.
         # Some HTTP servers may transfer-encode a byte-identical PNG.
         # The transport must be diagnosed, not confused with lost DEM data.
-        if not actual_png.startswith(b"\\x89PNG\\r\\n\\x1a\\n"):
+        if not actual_png.startswith(bytes.fromhex("89504e470d0a1a0a")):
             raise AssertionError(
                 f"TileServer GL replied image/png with non-PNG bytes at {z}/{x}/{xyz_y}: "
                 f"first24={actual_png[:24].hex()} content-encoding={h.get('content-encoding')} "

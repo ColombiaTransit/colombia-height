@@ -17,7 +17,7 @@ from urllib.parse import quote
 
 import requests
 
-DIMAR_ROOT = "https://ide.dimar.mil.co/server/rest/services"
+DIMAR_ROOT = "https://ide.dimar.mil.co/serveridem/rest/services"
 PORTAL = "https://www.dimar.mil.co/ide"
 STUDY_COG_REGISTRY = Path("data/official-igac-source-review-2026-11-13.json")
 SITE_PROBES = {
@@ -280,7 +280,7 @@ def main():
     ap.add_argument("--max-services", type=int, default=200)
     ap.add_argument("--max-layers", type=int, default=110)
     args = ap.parse_args()
-    if not args.root.startswith("https://ide.dimar.mil.co/server/rest/services"):
+    if not args.root.startswith("https://ide.dimar.mil.co/serveridem/rest/services"):
         ap.error("Discovery root must be on the official DIMAR ArcGIS Server")
     if not (1 <= args.max_services <= 400 and 1 <= args.max_layers <= 300):
         ap.error("Study caps must be within 1..400 services, 1..300 layers")

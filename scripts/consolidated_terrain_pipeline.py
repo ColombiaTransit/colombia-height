@@ -229,9 +229,9 @@ def render_chunk(plan_dir, chunk_id, manifest, land_clip, land_meta,
     result = write_inland_mbtiles(
         mbtiles, rows, sources, cache,
         (-84.0, -5.0, -66.0, 17.0), (min(t[0] for t in tiles), max(t[0] for t in tiles)))
-    if (result["full_land_tiles_written"] != statuses["fully_OSM_Colombia_land"]
+    if (result["full_land_tiles_written"] != statuses.get("fully_OSM_Colombia_land", 0)
             or result.get("skipped_all_offland", 0)
-            != statuses["skip_no_physical_OSM_Colombia_land"]):
+            != statuses.get("skip_no_physical_OSM_Colombia_land", 0)):
         mbtiles.unlink(missing_ok=True)
         raise AssertionError("Native writer count differs from OSM chunk mask")
     report = {**base, **result, "status": "SUCCESS_inland_only",

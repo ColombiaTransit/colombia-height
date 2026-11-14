@@ -86,8 +86,8 @@ def select_only_new_140_missing(native, old):
 
 def build(native,old,shapes,meta,errors):
     missing=select_only_new_140_missing(native,old)
-    if not shapes:
-        raise RuntimeError("No independent small country geometry available; do not guess land")
+    if set(shapes)!=set(ISO_CODES):
+        raise RuntimeError("Both independent Colombia and Ecuador ADM0 references are required; incomplete reference coverage cannot classify these tiles")
     grouped=Counter()
     land_possible=Counter()
     out=[]

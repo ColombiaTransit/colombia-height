@@ -137,7 +137,7 @@ class ConsolidatedTerrainTests(unittest.TestCase):
         report = json.loads((self.results / f"chunk-{first}.report.json").read_text())
         self.assertEqual(report["status"], "BLOCKED_mixed_coast")
         self.assertFalse((self.results / f"chunk-{first}.mbtiles").exists())
-        with self.assertRaises(RuntimeError):
+        with self.assertRaisesRegex(ValueError, "Invalid or blocked"):
             merge_verified_chunks(self.plan_dir, self.results, self.root / "no.mbtiles")
 
     def test_skip_only_real_offland_without_downloading_native(self):

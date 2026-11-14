@@ -1,0 +1,13 @@
+ONE-TIME START — ColombiaTransit/colombia-height national Terrain-RGB
+Requested by the repository user on 2026-11-14.
+Workflow: .github/workflows/national-terrain-overnight-2026-11-14.yml
+Original sources: verified staged 140 Copernicus GLO-30 COGs; original 137 priority unchanged.
+Original reusable OSM: input artifact from successful run 43624636935 (actual Colombia relation R120027 and physical OSM land).
+Target: complete z0-13, 32 geographically owned shards.
+Execution: prepare -> render all 32 shards -> strict fail-closed merge, automatically connected.
+Output destination: UNPUBLISHED GitHub draft colombia-terrain-draft-2026-11-14.
+Outside Colombian physical land: flat 0m visual-only background, never bathymetry or measured elevation.
+Release/publication: NOT authorized automatically; human approval after national validation.
+Disk: every shard checks actual available disk; low-disk jobs stop safely.
+Do not repeat source audits or inland/coast pilot investigations.
+Startup marker committed once and never updated to avoid accidental second launch.

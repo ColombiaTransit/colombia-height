@@ -64,7 +64,7 @@ def validate_stage_selection(original,staged,decision):
     return staged[137:]
 
 
-def read_original_national_shards(root):
+def read_original_national_shards(root,original_sources):
     root=Path(root)
     shards=sorted(root.glob("land-shard-*.ndjson.gz"))
     summaries=sorted(root.glob("land-summary-*.json"))
@@ -92,8 +92,12 @@ def read_original_national_shards(root):
                 data[key]=valid
                 by_zoom[key[0]][row["dem_coverage"]]+=1
                 shard_totals[shard]+=1
-    if len(data)!=EXPECTED_BASE_CANDIDATES:
-        raise AssertionError(f"Missing original candidate tiles: {len(data)} != {EXPECTED_BASE_CANDIDATES}")
+    # The original land-shard files intentionally store ONLY incomplete
+    # tiles. The complete 92,973 original source tiles are implicit and
+    # audited in each shard summary. Rebuild the full candidate key set
+    # without resampling a single already-verified full tile.
+    if len(data)!=3778 or any(v==PIXLEN for v in data.values()):
+        raise AssertionError("Expected exactly 3,778 original incomplete z0-z13 records")
     totals=0
     for path in summaries:
         stat=json.loads(path.read_text())
@@ -102,8 +106,12 @@ def read_original_national_shards(root):
                 or stat.get("national_publication_allowed") is not False):
             raise AssertionError("Only full immutable original 137-source evidence permitted")
         shard=stat["shard"]
-        if shard_totals[shard]!=stat["tiles_checked"]:
-            raise AssertionError("Source coverage shard item count mismatch")
+        incomplete_here=sum(n for k,n in stat["dem_coverage_counts"].items()
+                            if k!="full_dem_coverage")
+        if shard_totals[shard]!=incomplete_here:
+            raise AssertionError("Original incomplete register shard count mismatch")
+        if sum(stat["dem_coverage_counts"].values())!=stat["tiles_checked"]:
+            raise AssertionError("Shard count excludes inferred fully covered DEM tiles")
         totals+=stat["tiles_checked"]
     if totals!=EXPECTED_BASE_CANDIDATES:
         raise AssertionError("Original national shard reconciliation failed")
@@ -114,6 +122,27 @@ def read_original_national_shards(root):
         raise AssertionError("Not all 32 original shard identities present")
     if {json.loads(x.read_text())["shard"] for x in summaries}!=set(range(32)):
         raise AssertionError("Missing original shard summary IDs")
+    planned=set()
+    for z in range(14):
+        for x,y in candidate_tiles(original_sources,z):
+            planned.add((z,x,y))
+    if len(planned)!=EXPECTED_BASE_CANDIDATES or not set(data).issubset(planned):
+        raise AssertionError("Original full 137-source candidate plan and incomplete source rows differ")
+    for tile in planned-set(data):
+        data[tile]=PIXLEN
+        by_zoom[tile[0]]["full_dem_coverage"]+=1
+    if len(data)!=EXPECTED_BASE_CANDIDATES or sum(
+        c["full_dem_coverage"] for c in by_zoom.values())!=92973:
+        raise AssertionError("Original 92,973 implicit full-coverage tiles missing")
+    # Verify FULL + incomplete counts reconcile precisely to shard summaries
+    # after materializing the implicit original fully-covered candidates.
+    global_shard_counts=Counter()
+    for key in planned:
+        global_shard_counts[geographical_owner(*key)]+=1
+    for path in summaries:
+        stat=json.loads(path.read_text())
+        if global_shard_counts[stat["shard"]]!=stat["tiles_checked"]:
+            raise AssertionError("Complete original source tile count drift within geographical shard")
     return data,by_zoom
 
 
@@ -302,7 +331,7 @@ def run(baseline_land,base_osm,base_manifest,staged_manifest,
     old=parse_manifest(base_manifest)
     new=parse_manifest(staged_manifest)
     approved=validate_stage_selection(old,new,json.loads(Path(selection).read_text()))
-    baseline,old_zoom=read_original_national_shards(baseline_land)
+    baseline,old_zoom=read_original_national_shards(baseline_land,old)
     original_osm=json.loads(Path(base_osm).read_text())
     if (original_osm.get("mode")!="national"
             or original_osm.get("tiles_checked")!=1917

@@ -8,7 +8,10 @@
     "tumaco_malpelo_exact_native_z13_recovery": 43497684367,
     "gorgona_n03_w079_exact_native_z13_recovery": 43589114722,
     "exact_island_polygon_native_recovery": 43594868906,
-    "corrected_Santa_Catalina_Gorgonilla_OSM_and_native_source_validation": 43595662069
+    "corrected_Santa_Catalina_Gorgonilla_OSM_and_native_source_validation": 43595662069,
+    "island_minor_sample_and_multizoom_seams": 43596436204,
+    "gorgona_malpelo_native_30m_source_border_review": 43596823989,
+    "verified_two_island_139_COG_staging_manifest": 43597073272
   },
   "selected_native_cogs_original": 137,
   "unselected_cog_candidates": 52,
@@ -650,5 +653,23 @@
       "z13_existing_137_source_real_valid_land_pixel_centers": 1657,
       "z13_missing_native_land_pixel_centers": 0
     }
+  },
+  "staging_139_review": {
+    "decision": "two_exact_original_Copernicus_COGs_approved_for_staging_only",
+    "review_register": "data/staged-island-source-selection-2026-11-14.json",
+    "actual_staging_manifest_workflow": ".github/workflows/stage-two-island-sources.yml",
+    "staged_COGs": [
+      "Copernicus_DSM_COG_10_N03_00_W082_00_DEM",
+      "Copernicus_DSM_COG_10_N03_00_W079_00_DEM"
+    ],
+    "excluded_other_candidate_COGs": 50,
+    "staging_count": 139,
+    "original_count": 137,
+    "verified_actual_native_30m_border_samples_each": 350,
+    "disproportionate_native_border_flags_each": 0,
+    "staging_only": true,
+    "original_manifest_modified": false,
+    "full_national_source_scope_approved": false,
+    "national_publication_allowed": false
   }
 }

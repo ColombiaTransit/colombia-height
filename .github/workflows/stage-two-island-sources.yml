@@ -1,0 +1,79 @@
+name: Stage Verified Malpelo and Gorgona COGs as Separate 139-Source Study
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/stage-two-island-sources.yml'
+      - 'scripts/stage_island_sources.py'
+      - 'tests/test_stage_island_sources.py'
+
+permissions:
+  contents: read
+
+jobs:
+  stage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install existing GLO-30 inventory and source QA requirements
+        run: python -m pip install -r requirements-terrain.txt -r requirements-island-inventory.txt
+      - name: Validate entire offline test suite including strict 139-staging-only selection gate
+        run: python -m unittest discover -s tests -v
+      - name: Reconstruct and verify untouched original 137-Copernicus-source inventory
+        run: |
+          python scripts/inventory.py --output output --workers 8
+          python scripts/extend_inventory.py --inventory output --islands data/colombia-island-probes.json
+          python - <<'PY'
+          import csv
+          with open('output/colombia_dem_manifest_extended.csv',newline='') as f:
+              rows=list(csv.DictReader(f))
+          assert len(rows)==137 and all(x['status']=='ok' for x in rows)
+          print('Original manifest still exactly 137 selected valid Copernicus COGs')
+          PY
+      - name: Construct a separate 139-COG island-only staging CSV with two originally published DEM sources
+        run: |
+          python scripts/stage_island_sources.py \
+            --manifest output/colombia_dem_manifest_extended.csv \
+            --review data/staged-island-source-selection-2026-11-14.json \
+            --output output/island-stage
+      - name: Block source mutation, additional candidates, fabrication and national publication
+        run: |
+          python - <<'PY'
+          import csv,json
+          from pathlib import Path
+          root=Path('output/island-stage')
+          report=json.loads((root/'island-staging-139-report.json').read_text())
+          with (root/'colombia_dem_manifest_island_staging_139.csv').open(newline='') as f:
+              staged=list(csv.DictReader(f))
+          with Path('output/colombia_dem_manifest_extended.csv').open(newline='') as f:
+              original=list(csv.DictReader(f))
+          expected={
+              'Copernicus_DSM_COG_10_N03_00_W082_00_DEM',
+              'Copernicus_DSM_COG_10_N03_00_W079_00_DEM'}
+          assert report['baseline_source_count']==137
+          assert report['staging_source_count']==139
+          assert report['national_publication_allowed'] is False
+          assert report['quitasueno_excluded'] is True
+          assert report['all_other_50_omitted_sources_still_outside_staging'] is True
+          assert report['artificial_heights_added']==0
+          assert report['permanent_137_source_manifest_changed'] is False
+          assert len(staged)==139 and len(original)==137
+          assert {x['name'] for x in staged}-{x['name'] for x in original}==expected
+          assert all(x['status']=='ok' for x in staged)
+          print('Temporary staged 139-source dataset only; no national MBTiles release')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: colombia-strict-staged-139-two-offshore-island-cogs
+          path: |
+            output/island-stage/colombia_dem_manifest_island_staging_139.csv
+            output/island-stage/island-staging-139-report.json
+          retention-days: 1
+          if-no-files-found: error

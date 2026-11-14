@@ -296,7 +296,7 @@ class ConsolidatedTerrainTests(unittest.TestCase):
                 "mbtiles_file":path.name,"mbtiles_sha256":sha256_file(path)}
             (self.results/f"chunk-{chunk['id']}.report.json").write_text(json.dumps(report))
         out=self.root/"must-not-exist.mbtiles"
-        with self.assertRaises((AssertionError,ValueError,OSError,Exception)):
+        with self.assertRaises((AssertionError,ValueError,OSError)):
             merge_verified_chunks(self.plan_dir,self.results,out)
         self.assertFalse(out.exists())
         self.assertFalse(out.with_name(out.name+".incomplete").exists())

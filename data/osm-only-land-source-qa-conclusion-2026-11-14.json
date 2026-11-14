@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "decision_date": "2026-11-14",
+  "project": "ColombiaTransit/colombia-height",
+  "decision": "Mapbox Terrain-RGB elevation data required only on OpenStreetMap physical land inside the Colombia OSM country relation, not on sea/ocean pixels; sea bathymetry is explicitly OUT OF SCOPE",
+  "OSM_physical_land_reference": "OSM natural=coastline assembled land polygons, including islands and islets; other OSM place=island/islet points or administrative water cannot alone make land",
+  "OSM_colombia_country_reference": {
+    "relation_id": 120027,
+    "url": "https://www.openstreetmap.org/relation/120027",
+    "lookup": "https://nominatim.openstreetmap.org/lookup?osm_ids=R120027&format=json&polygon_geojson=1&polygon_threshold=0",
+    "country_scope_not_physical_coast": true
+  },
+  "sources": {
+    "original_prod_COG_count": 137,
+    "staged_COG_count": 140,
+    "additional_reviewed_COGs": [
+      "Copernicus_DSM_COG_10_N03_00_W082_00_DEM",
+      "Copernicus_DSM_COG_10_N03_00_W079_00_DEM",
+      "Copernicus_DSM_COG_10_N01_00_W080_00_DEM"
+    ],
+    "no_source_added_during_land_only_QA": true
+  },
+  "evidence_runs": {
+    "previous_native_140_incremental": 43609826904,
+    "previous_27_plus_68_osm_only": 43611992754,
+    "all_997_original_OSM_land_deficits_compared_with_OSM_Colombia": 43612505074
+  },
+  "previous_source_candidate_scope": {
+    "original_139_scope_remaining_140_incomplete_z13_OSM_land_tiles": 997,
+    "all_997_tiles_disjoint_from_OSM_colombia_relation": 997,
+    "OSM_land_missing_native_pixels_outside_OSM_colombia_country_reference": 23748406,
+    "old_140_scope_confirmed_missing_native_pixels_inside_OSM_colombia_land": 0,
+    "original_139_to_140_valid_existing_heights_lost": 0
+  },
+  "new_Tumaco_140_only_scope": {
+    "incomplete_z13_tiles": 68,
+    "z13_native_NoData_samples": 2688103,
+    "tiles_disjoint_OSM_colombia_country_relation": 67,
+    "NoData_disjoint_OSM_colombia_relation": 2656871,
+    "one_partially_intersecting_OSM_colombia_relation": {
+      "z": 13,
+      "x": 2297,
+      "y": 4050,
+      "NoData_native_samples": 31232,
+      "OSM_natural_coastline_ways_directly_in_tile": 0,
+      "OSM_closed_CCW_coastline_polygon_hits": 0,
+      "OSM_named_island_area_polygon_hits": 0,
+      "note": "No mapped physical OSM land has been demonstrated in this offshore tile. The maritime/admin boundary intersects it, but that alone is not land. Strict pixel-level land exclusion from this tile remains pending local OSMCoastline land polygon verification; do not claim all 31232 pixels are sea."
+    },
+    "positive_OSM_land_NoData_confirmed_inside_new_tile_scope": 0
+  },
+  "study_method": "Reused preexisting exact native/OSM pixel results; looked up single OpenStreetMap Colombia admin_level=2 relation 120027 and local OSM coastline/island elements in Tumaco bbox. No global OSM polygon archive, native COG raster, national DEM, foreign geoBoundaries or IGAC reruns.",
+  "land_only_terrain_rule": {
+    "land_pixel": "Pixel center lies inside a valid OSM natural=coastline land polygon AND inside OSM Colombia country scope",
+    "must_have_native_original_valid_elevation": true,
+    "missing_on_required_land_pixel": "block export; never invent 0m or ocean depth",
+    "outside_required_land": "not required by DEM coverage; never count missing native NoData as a Colombian terrain defect",
+    "no_land_tile": "do not emit a Terrain-RGB tile",
+    "mixed_coast_tile": "must mask off-land pixels without writing fake elevation values; validate target renderer's NoData/alpha handling before release",
+    "country_relation_marine_area_not_land": true,
+    "unverified_geometry": "remain UNKNOWN; no guess is ocean or land",
+    "no_bathymetry_synthesis": true
+  },
+  "remaining_release_gates": [
+    "Verify exact small local OSMCoastline physical land mask for the one partly intersecting offshore Tumaco z13 tile; no source recheck required.",
+    "Implement and test land-only PNG/MBTiles handling for ocean-transparent/masked pixels at mixed coast tiles and low zooms; never encode nodata as RGB(0,0,0) / -10000m.",
+    "Run land-only all-zoom output validation and TileServer GL/MapLibre terrain consumer compatibility, including islands/coasts, without repeated original source inventory scans."
+  ],
+  "quitasueno_excluded": true,
+  "national_mapbox_terrain_rgb_release_allowed": false,
+  "osm_attribution": "© OpenStreetMap contributors — ODbL 1.0 https://www.openstreetmap.org/copyright"
+}

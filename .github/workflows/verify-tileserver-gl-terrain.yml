@@ -2,7 +2,7 @@ name: TileServer GL Real Copernicus Coast MBTiles — API and MapLibre 6.8
 
 on:
   push:
-    paths: ['.github/workflows/verify-tileserver-gl-terrain.yml']
+    paths: ['.github/workflows/verify-tileserver-gl-terrain.yml'] # single real server integration pilot
   workflow_dispatch:
 
 permissions:

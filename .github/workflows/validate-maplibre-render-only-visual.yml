@@ -1,5 +1,5 @@
 name: Real MapLibre Chromium 3D Coast Rendering Smoke — Reuse Cartagena Artifact
-# Browser test is deliberately limited to previously downloaded 26 valid coastal tiles.
+# Browser uses MapLibre 6.8 ESM + fixed 204 NoData handling and the existing 26 valid coastal tiles.
 
 on:
   push:

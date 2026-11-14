@@ -44,7 +44,7 @@ from osm_national_land_audit import PolygonMask
 from national_dem_coverage import intersecting_source_indices,local_cogs
 from two_cog_seam_pilot import warp_sources
 from medellin_terrain import rgb_encode
-from render_only_coast_rgb import COAST_MODE, encode_coast_render_only
+from render_only_coast_rgb import COAST_MODE, COUNTRY_CLIP_MODE, encode_coast_render_only
 
 TILE_PX=256
 NATIVE_NODATA=-9999.
@@ -171,7 +171,10 @@ def validated_terrain_rgb(heights,required):
     return blob,maxerr
 
 
-def write_inland_mbtiles(target,rows,source,cache,bbox,zooms,coast_render_surface=False):
+def write_inland_mbtiles(target,rows,source,cache,bbox,zooms,
+                        coast_render_surface=False, country_clip_background=False):
+    if country_clip_background and not coast_render_surface:
+        raise ValueError("Country-clipped visual background requires explicit coast-render mode")
     target=Path(target)
     target.parent.mkdir(parents=True,exist_ok=True)
     tmp=target.with_name(target.name+".incomplete")
@@ -209,7 +212,9 @@ def write_inland_mbtiles(target,rows,source,cache,bbox,zooms,coast_render_surfac
             "attribution":"Contains modified Copernicus DEM data; © OpenStreetMap contributors (ODbL 1.0)",
         }
         if coast_render_surface:
-            metadata["coast_render_mode"]=COAST_MODE
+            metadata["coast_render_mode"]=(COUNTRY_CLIP_MODE if country_clip_background else COAST_MODE)
+            metadata["foreign_land_is_sea"]="false"
+            metadata["foreign_land_visual_background_m"]="0" if country_clip_background else "forbidden"
             metadata["visualization_sea_surface_m"]="0"
             metadata["sea_surface_is_bathymetry"]="false"
             metadata["osm_land_mask"]="osm_land_mask table, PNG L 255=true OSM Colombian land"
@@ -221,8 +226,10 @@ def write_inland_mbtiles(target,rows,source,cache,bbox,zooms,coast_render_surfac
             mixed=row["status"]=="mixed_coastal_OSM_Colombia_land_and_offland"
             if row["status"]!="fully_OSM_Colombia_land" and not (mixed and coast_render_surface):
                 raise AssertionError("Coast tiles require explicit render-only mode")
-            if mixed and (not isinstance(row.get("physical_mask"),np.ndarray)
-                          or np.any(row["physical_mask"] & ~row["mask"])):
+            if coast_render_surface and not isinstance(row.get("physical_mask"),np.ndarray):
+                raise ValueError("Explicit coast-mode requires physical OSM land mask for every included tile")
+            if mixed and (not country_clip_background
+                          and np.any(row["physical_mask"] & ~row["mask"])):
                 raise ValueError("Cannot encode foreign/out-of-country land as sea surface")
             tile=row["tile"]
             ids=intersecting_source_indices(source,*tile)
@@ -236,9 +243,12 @@ def write_inland_mbtiles(target,rows,source,cache,bbox,zooms,coast_render_surfac
                 raise ValueError(f"Missing native Colombian OSM land DEM at {tile}")
             if coast_render_surface:
                 png,mask_png,quality=encode_coast_render_only(
-                    heights,row["mask"],row["physical_mask"])
+                    heights,row["mask"],row["physical_mask"],
+                    allow_offscope_flat=country_clip_background)
                 error=quality["original_land_error_max_m"]
                 report["render_only_OSM_sea_surface_pixels"]+=quality["render_only_OSM_sea_surface_pixels"]
+                report["render_only_offscope_foreign_land_pixels"]+=quality["render_only_offscope_foreign_land_pixels"]
+                report["render_only_total_background_pixels"]+=quality["render_only_total_background_pixels"]
                 report["OSM_land_masks_written"]+=1
                 if mixed:
                     report["mixed_coast_tiles_written"]+=1
@@ -273,7 +283,10 @@ def write_inland_mbtiles(target,rows,source,cache,bbox,zooms,coast_render_surfac
 
 
 def run(source_manifest,land_clip,land_meta,country_json,output,
-        bbox,minzoom,maxzoom,max_tiles,cache,coast_render_surface=False):
+        bbox,minzoom,maxzoom,max_tiles,cache,coast_render_surface=False,
+        country_clip_background=False):
+    if country_clip_background and not coast_render_surface:
+        raise ValueError("Country-clipped background requires opt-in coast render mode")
     sources=parse_manifest(source_manifest)
     require_verified_staging(sources)
     physical,meta=load_osm_coastline_land(land_clip,land_meta)
@@ -291,13 +304,14 @@ def run(source_manifest,land_clip,land_meta,country_json,output,
             f"{len(blocked)} mixed OSM land/coast tiles require reviewed "
             "MapLibre raster-dem offland encoding; no MBTiles generated. "
             "First few zxy: "+str(blocked[:8]))
-    if statuses["mixed_foreign_physical_OSM_land_blocked"]:
+    if statuses["mixed_foreign_physical_OSM_land_blocked"] and not country_clip_background:
         raise RuntimeError("Refuse foreign/out-of-country physical land in mixed coast render mode")
     cache=Path(cache)
     cache.mkdir(parents=True,exist_ok=True)
     result=write_inland_mbtiles(
         output,rows,sources,cache,bbox,(minzoom,maxzoom),
-        coast_render_surface=coast_render_surface)
+        coast_render_surface=coast_render_surface,
+        country_clip_background=country_clip_background)
     evidence={
         "status":("OSM_land_only_coast_RENDER_ONLY_NATIVE_GLO30_pilot_not_national_release"
                   if coast_render_surface else
@@ -313,7 +327,8 @@ def run(source_manifest,land_clip,land_meta,country_json,output,
         "generated_mbtiles_file":str(output),
         "generated_mbtiles_SHA256":hashlib.sha256(Path(output).read_bytes()).hexdigest(),
         **result,
-        "coast_render_mode":COAST_MODE if coast_render_surface else "strict_inland",
+        "coast_render_mode":(COUNTRY_CLIP_MODE if country_clip_background else
+                             COAST_MODE if coast_render_surface else "strict_inland"),
         "no_ocean_RGB_pixel_generated":result.get("render_only_OSM_sea_surface_pixels",0)==0,
         "no_coastal_mixed_tile_generated":result.get("mixed_coast_tiles_written",0)==0,
         "no_synthetic_land_heights":True,
@@ -341,12 +356,15 @@ def main():
     p.add_argument("--max-tiles",type=int,default=500)
     p.add_argument("--coast-render-only-sea-surface",action="store_true",
                    help="EXPERIMENTAL: sea-only pixels are visual 0m (NOT bathymetry); preserve exact OSM land mask in SQLite")
+    p.add_argument("--render-flat-outside-colombia",action="store_true",
+                   help="EXPLICIT NATIONAL DISPLAY ONLY: OSM foreign land outside Colombia = flat 0m background, NOT sea or measured terrain")
     p.add_argument("--cache",type=Path,default=Path("output/native-cog-cache"))
     p.add_argument("--output",type=Path,default=Path("output/osm-land-only-pilot.mbtiles"))
     a=p.parse_args()
     run(a.source_manifest,a.osm_land_clip,a.osm_land_meta,
         a.osm_country_geojson,a.output,a.bbox,a.minzoom,
-        a.maxzoom,a.max_tiles,a.cache,a.coast_render_only_sea_surface)
+        a.maxzoom,a.max_tiles,a.cache,a.coast_render_only_sea_surface,
+        a.render_flat_outside_colombia)
 
 
 if __name__=="__main__":

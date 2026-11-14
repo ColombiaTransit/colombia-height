@@ -25,6 +25,7 @@ from generate_osm_land_only_terrain import (
 )
 from merge_regions import merge_mbtiles
 from national_tile_plan import candidate_tiles, owner, parse_manifest
+from render_only_coast_rgb import COAST_MODE, decode_mask_png
 
 MIN_SAFE_ZOOM = 9
 MAX_SAFE_ZOOM = 13
@@ -136,7 +137,7 @@ def create_plan(manifest, output_dir, minzoom=MIN_SAFE_ZOOM,
         ],
         "national_release_authorized": False,
         "unresolved": [
-            "mixed MapLibre coast/no-data encoding",
+            "opt-in surface-zero coastal rendering requires a real MapLibre/TileServer screenshot acceptance test",
             "z0-z8 native terrain and full-country renderer validation",
         ],
     }
@@ -176,8 +177,8 @@ def load_chunk(plan_dir, chunk_id):
 
 
 def render_chunk(plan_dir, chunk_id, manifest, land_clip, land_meta,
-                 country_json, output_dir, cache):
-    """Produce inland-only chunk using existing native warp; block coast."""
+                 country_json, output_dir, cache, coast_render_surface=False):
+    """Produce native OSM chunk; mixed coast needs explicit render-only opt-in."""
     plan, info, tiles = load_chunk(plan_dir, chunk_id)
     if sha256_file(manifest) != plan["source_manifest_sha256"]:
         raise ValueError("Source manifest changed after immutable plan creation")
@@ -191,7 +192,8 @@ def render_chunk(plan_dir, chunk_id, manifest, land_clip, land_meta,
     require_verified_staging(sources)
     physical, meta = load_osm_coastline_land(land_clip, land_meta)
     country = load_osm_country(country_json)
-    statuses, rows = prepare_plan(tiles, physical, country)
+    statuses, rows = prepare_plan(
+        tiles, physical, country, include_physical=coast_render_surface)
     blocked = [{"zxy": list(row["tile"]), "land_pixels": row["land_pixels"]}
                for row in rows
                if row["status"] == "mixed_coastal_OSM_Colombia_land_and_offland"]
@@ -205,10 +207,11 @@ def render_chunk(plan_dir, chunk_id, manifest, land_clip, land_meta,
         "OSM_country_relation": 120027,
         "planned_tiles": len(tiles),
         "mask_summary": dict(statuses),
-        "blocked_coastal_tiles": blocked,
+        "blocked_coastal_tiles": blocked if not coast_render_surface else [],
+        "coast_render_mode": COAST_MODE if coast_render_surface else "strict_inland",
         "national_release_authorized": False,
     }
-    if blocked:
+    if blocked and not coast_render_surface:
         report = {**base, "status": "BLOCKED_mixed_coast",
                   "full_land_tiles_written": 0,
                   "skipped_all_offland": statuses.get("skip_no_physical_OSM_Colombia_land", 0)}
@@ -216,7 +219,18 @@ def render_chunk(plan_dir, chunk_id, manifest, land_clip, land_meta,
         raise RuntimeError(
             f"Chunk {chunk_id}: {len(blocked)} mixed coast/island tiles. "
             "No native sources fetched and no MBTiles emitted; see blocker report.")
-    if statuses.get("fully_OSM_Colombia_land", 0) == 0:
+    if statuses.get("mixed_foreign_physical_OSM_land_blocked", 0):
+        report = {**base, "status": "BLOCKED_foreign_land_cannot_be_sea",
+                  "blocked_coastal_tiles": blocked,
+                  "full_land_tiles_written": 0,
+                  "skipped_all_offland": statuses.get("skip_no_physical_OSM_Colombia_land", 0)}
+        atomic_json(report_path, report)
+        raise RuntimeError("Foreign/out-of-country OSM land must not be rendered as zero sea surface")
+    required_tile_count = (
+        statuses.get("fully_OSM_Colombia_land", 0) +
+        (statuses.get("mixed_coastal_OSM_Colombia_land_and_offland", 0)
+         if coast_render_surface else 0))
+    if required_tile_count == 0:
         report = {**base, "status": "SKIPPED_no_Colombian_OSM_land",
                   "full_land_tiles_written": 0,
                   "skipped_all_offland": len(tiles)}
@@ -226,15 +240,27 @@ def render_chunk(plan_dir, chunk_id, manifest, land_clip, land_meta,
     # in the original generator. No replacement code here.
     cache = Path(cache)
     cache.mkdir(parents=True, exist_ok=True)
-    result = write_inland_mbtiles(
-        mbtiles, rows, sources, cache,
-        (-84.0, -5.0, -66.0, 17.0), (min(t[0] for t in tiles), max(t[0] for t in tiles)))
+    if coast_render_surface:
+        result = write_inland_mbtiles(
+            mbtiles, rows, sources, cache,
+            (-84.0, -5.0, -66.0, 17.0),
+            (min(t[0] for t in tiles), max(t[0] for t in tiles)),
+            coast_render_surface=True)
+    else:
+        result = write_inland_mbtiles(
+            mbtiles, rows, sources, cache,
+            (-84.0, -5.0, -66.0, 17.0),
+            (min(t[0] for t in tiles), max(t[0] for t in tiles)))
     if (result["full_land_tiles_written"] != statuses.get("fully_OSM_Colombia_land", 0)
+            or result.get("mixed_coast_tiles_written", 0) != (
+                statuses.get("mixed_coastal_OSM_Colombia_land_and_offland", 0)
+                if coast_render_surface else 0)
             or result.get("skipped_all_offland", 0)
             != statuses.get("skip_no_physical_OSM_Colombia_land", 0)):
         mbtiles.unlink(missing_ok=True)
         raise AssertionError("Native writer count differs from OSM chunk mask")
-    report = {**base, **result, "status": "SUCCESS_inland_only",
+    report = {**base, **result,
+              "status": "SUCCESS_render_only_coast" if coast_render_surface else "SUCCESS_inland_only",
               "mbtiles_file": mbtiles.name, "mbtiles_sha256": sha256_file(mbtiles)}
     atomic_json(report_path, report)
     return report
@@ -259,14 +285,22 @@ def merge_verified_chunks(plan_dir, result_dir, target):
                 or report.get("blocked_coastal_tiles")):
             raise ValueError(f"Invalid or blocked chunk report: {chunk['id']}")
         written = report.get("full_land_tiles_written", -1)
+        mixed = report.get("mixed_coast_tiles_written", 0)
         skipped = report.get("skipped_all_offland", -1)
-        if written < 0 or skipped < 0 or written + skipped != chunk["tiles"]:
+        if (not isinstance(mixed,int) or mixed<0 or written<0 or skipped<0
+                or written+mixed+skipped != chunk["tiles"]):
             raise ValueError(f"Missing/silent skipped tile in {chunk['id']}")
+        render_mode=report.get("coast_render_mode","strict_inland")
+        if render_mode not in ("strict_inland",COAST_MODE):
+            raise ValueError("Unexpected or unsupported render mode")
         if report["status"] == "SKIPPED_no_Colombian_OSM_land":
             if written:
                 raise ValueError("Offland-only chunk reported written tiles")
             continue
-        if report["status"] != "SUCCESS_inland_only" or written == 0:
+        if ((report["status"] not in ("SUCCESS_inland_only","SUCCESS_render_only_coast"))
+                or (report["status"]=="SUCCESS_inland_only" and render_mode!="strict_inland")
+                or (report["status"]=="SUCCESS_render_only_coast" and render_mode!=COAST_MODE)
+                or written+report.get("mixed_coast_tiles_written",0)==0):
             raise RuntimeError(f"Chunk {chunk['id']} not successfully rendered")
         name = f"chunk-{chunk['id']}.mbtiles"
         if report.get("mbtiles_file") != name:
@@ -277,24 +311,59 @@ def merge_verified_chunks(plan_dir, result_dir, target):
         with sqlite3.connect(f"file:{path.resolve()}?mode=ro", uri=True) as db:
             if db.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
                 raise ValueError("Chunk MBTiles failed SQLite validation")
-            if db.execute("SELECT count(*) FROM tiles").fetchone()[0] != written:
+            if db.execute("SELECT count(*) FROM tiles").fetchone()[0] != written+mixed:
                 raise ValueError("Chunk reported incorrect native XYZ count")
+            if render_mode==COAST_MODE:
+                mask_count=db.execute("SELECT COUNT(*) FROM osm_land_mask").fetchone()[0]
+                if mask_count!=written+mixed:
+                    raise ValueError("Coast-render MBTiles has missing exact OSM land masks")
+                mask_without_tile=db.execute("""SELECT COUNT(*) FROM osm_land_mask m
+                    LEFT JOIN tiles t USING(zoom_level,tile_column,tile_row)
+                    WHERE t.zoom_level IS NULL""").fetchone()[0]
+                if mask_without_tile:
+                    raise ValueError("Extra OSM land mask with no Terrain-RGB tile")
         sources.append(path)
-        actual += written
+        actual += written+mixed
     if len(sources) < 2:
         raise RuntimeError("Existing fail-closed merger requires at least two nonempty input shards")
     output = Path(target)
+    # A mixed input set with and without masks cannot be safely merged:
+    # analytical provenance would be silently lost in the old merger.
+    input_modes=set()
+    for path in sources:
+        with sqlite3.connect(f"file:{path.resolve()}?mode=ro",uri=True) as db:
+            mode=db.execute("SELECT value FROM metadata WHERE name='coast_render_mode'").fetchone()
+            input_modes.add(mode[0] if mode else "strict_inland")
+    if len(input_modes)!=1:
+        raise ValueError("Mixed inland/coastal chunk modes: regenerate consistent shards")
     merged = merge_mbtiles(sources, output)
     if merged["tiles"] != actual:
         output.unlink(missing_ok=True)
         raise AssertionError("Merged native tile counts differ from verified reports")
     with sqlite3.connect(output) as db:
+        if input_modes=={COAST_MODE}:
+            db.execute("""CREATE TABLE osm_land_mask(
+                zoom_level INTEGER, tile_column INTEGER, tile_row INTEGER,
+                mask_png BLOB, PRIMARY KEY(zoom_level,tile_column,tile_row))""")
+            for path in sources:
+                with sqlite3.connect(f"file:{path.resolve()}?mode=ro",uri=True) as src:
+                    for z,x,y,blob in src.execute(
+                            "SELECT zoom_level,tile_column,tile_row,mask_png FROM osm_land_mask"):
+                        decode_mask_png(blob) # verify exact binary OSM mask values
+                        db.execute("INSERT INTO osm_land_mask VALUES (?,?,?,?)",(z,x,y,blob))
+            if db.execute("SELECT COUNT(*) FROM osm_land_mask").fetchone()[0]!=actual:
+                raise AssertionError("Merge discarded part of factual OSM land masks")
+            db.execute("INSERT INTO metadata VALUES(?,?)",("coast_render_mode",COAST_MODE))
+            db.execute("INSERT INTO metadata VALUES(?,?)",("visualization_sea_surface_m","0"))
+            db.execute("INSERT INTO metadata VALUES(?,?)",("sea_surface_is_bathymetry","false"))
+            db.execute("INSERT INTO metadata VALUES(?,?)",("osm_land_mask","osm_land_mask table"))
         db.execute("INSERT OR REPLACE INTO metadata(name,value) VALUES(?,?)",
                    ("attribution", "Contains modified Copernicus DEM data; © OpenStreetMap contributors (ODbL 1.0)"))
         db.execute("INSERT OR REPLACE INTO metadata(name,value) VALUES(?,?)",
                    ("description", "Colombia inland OSM physical-land-only Terrain-RGB; mixed coast and low zoom pending, NOT a complete national release"))
         db.commit()
-    report = {"status": "MERGED_INLAND_ONLY_NOT_NATIONAL_RELEASE",
+    report = {"status": "MERGED_RENDER_ONLY_NOT_NATIONAL_RELEASE" if input_modes=={COAST_MODE} else "MERGED_INLAND_ONLY_NOT_NATIONAL_RELEASE",
+              "coast_render_mode":next(iter(input_modes)),
               "source_manifest_sha256": plan["source_manifest_sha256"],
               "tiles": actual, "chunks_checked": len(plan["chunks"]),
               "merged_mbtiles": str(output), "merged_sha256": sha256_file(output),
@@ -323,6 +392,8 @@ def main():
     render.add_argument("--osm-country-geojson", type=Path, required=True)
     render.add_argument("--output-dir", type=Path, required=True)
     render.add_argument("--cache", type=Path, default=Path("output/native-cog-cache"))
+    render.add_argument("--coast-render-only-sea-surface",action="store_true",
+                        help="Experimental opt-in 0m sea visualization with factual OSM mask; not bathymetry")
     merge = commands.add_parser("merge", help="Reuse original duplicate-safe MBTiles merger")
     merge.add_argument("--plan-dir", type=Path, required=True)
     merge.add_argument("--result-dir", type=Path, required=True)
@@ -334,7 +405,8 @@ def main():
     elif args.command == "render":
         render_chunk(args.plan_dir, args.chunk_id, args.manifest,
                      args.osm_land_clip, args.osm_land_meta,
-                     args.osm_country_geojson, args.output_dir, args.cache)
+                     args.osm_country_geojson, args.output_dir, args.cache,
+                     coast_render_surface=args.coast_render_only_sea_surface)
     else:
         merge_verified_chunks(args.plan_dir, args.result_dir, args.output)
 

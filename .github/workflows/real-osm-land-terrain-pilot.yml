@@ -8,9 +8,6 @@ on:
         required: true
         type: string
         default: '0'
-  push:
-    paths:
-      - '.github/workflows/real-osm-land-terrain-pilot.yml'
 
 permissions:
   contents: read
@@ -103,7 +100,7 @@ jobs:
         with:
           name: colombia-osm-terrain-pilot-inputs
           path: output/
-          retention-days: 90
+          retention-days: 7
           if-no-files-found: error
           compression-level: 6
       - name: Produce real native Copernicus GLO-30 terrain in a small fully inland bbox
@@ -153,5 +150,5 @@ jobs:
           path: |
             output/pilot/colombia-inland-real-terrain-rgb.mbtiles
             output/pilot/colombia-inland-real-terrain-rgb.report.json
-          retention-days: 30
+          retention-days: 7
           if-no-files-found: error

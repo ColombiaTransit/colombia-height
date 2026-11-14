@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "study_date": "2026-11-14",
+  "repo": "ColombiaTransit/colombia-height",
+  "workflow_run": 43605294875,
+  "workflow_url": "https://github.com/ColombiaTransit/colombia-height/actions/runs/43605294875",
+  "baseline_national_run": 43490555676,
+  "baseline_exact_OSM_z13_run": 43573144549,
+  "base_source_count": 137,
+  "staged_source_count": 139,
+  "original_source_manifest_unchanged": true,
+  "extra_staged_sources": [
+    {
+      "name": "Copernicus_DSM_COG_10_N03_00_W082_00_DEM",
+      "location": "Malpelo",
+      "order": "after_all_original_137"
+    },
+    {
+      "name": "Copernicus_DSM_COG_10_N03_00_W079_00_DEM",
+      "location": "Gorgona",
+      "order": "after_all_original_137"
+    }
+  ],
+  "all_zoom_source_candidate_tiles": {
+    "original": 96751,
+    "staged": 98152,
+    "extra_footprint_tiles": 1401,
+    "original_fully_covered": 92973,
+    "staged_fully_covered": 94288,
+    "original_partially_covered": 3778,
+    "staged_partially_covered": 3864,
+    "new_source_affected_original_or_new_tiles_recalculated": 1558
+  },
+  "z13": {
+    "original_candidates": 72108,
+    "staged_candidates": 73166,
+    "new_candidates": 1058,
+    "original_partially_covered_tiles": 1917,
+    "staged_partially_covered_tiles": 1963,
+    "original_partially_covered_in_original_scope_after_staging": 1851,
+    "original_partial_tiles_now_fully_restored": 66,
+    "new_scope_partially_covered_tiles": 112,
+    "original_tiles_with_missing_OSM_land_pixels": 1008,
+    "staged_tiles_with_missing_OSM_land_pixels": 1005,
+    "original_missing_native_DEM_pixels": 49095948,
+    "staged_missing_native_DEM_pixels": 50443636,
+    "restored_native_DEM_pixels_in_original_scope": 1278812,
+    "remaining_missing_native_pixels_on_original_scope": 47817136,
+    "missing_native_pixels_in_new_source_scope": 2626500,
+    "original_missing_OSM_land_pixels": 23879764,
+    "staged_missing_OSM_land_pixels": 23878663,
+    "real_OSM_reference_land_pixels_recovered_in_original_scope": 1101,
+    "new_scope_missing_OSM_reference_land_pixels": 0,
+    "original_missing_OUTSIDE_OSM_land_unknown_not_ocean": 25216184,
+    "staged_missing_OUTSIDE_OSM_land_unknown_not_ocean": 26564973,
+    "previously_missing_outside_OSM_unknown_samples_recovered": 1277711,
+    "new_scope_missing_OUTSIDE_OSM_unknown_not_ocean": 2626500
+  },
+  "original_selected_cog_candidates_remaining_unreviewed": 50,
+  "IGAC_refreshed_land_mask": "unavailable_NULL_not_zero",
+  "footprint_is_not_certified_Colombian_jurisdiction": true,
+  "source_degree_cells_include_neighbor_countries": true,
+  "OSM_outside_land_is_not_confirmed_ocean": true,
+  "no_original_valid_elevations_changed": true,
+  "no_synthetic_sea_or_bathymetry_pixels": true,
+  "quitasueno_excluded": true,
+  "national_Terrain_RGB_publication_allowed": false,
+  "source_method": "Incremental native validity recalculation for all 139-source affected z0-13 XYZ tiles, with 137-source 32-shard original incomplete records and full-coverage summaries reconciled; exact z13 OSM land comparison against frozen previous 1917-tile report and new-scope tiles.",
+  "limitations": [
+    "OSM land includes adjacent foreign territories and is not a legal Colombian shoreline or administrative mask.",
+    "IGAC was unavailable during the 139-source audit. No official land difference inferred.",
+    "Missing DEM pixels in new source-degree-cell candidate tiles may fall over ocean or outside Colombia; they are UNKNOWN, not missing Colombian terrain.",
+    "Zoom 0-13 recovery pixel sums refer to resampled XYZ grids, not independent 30m ground pixels.",
+    "Before any national Terrain-RGB build, determine official Colombia land scope, separately evaluate Tumaco N01_W080, and validate strict all-zoom publication gates."
+  ]
+}

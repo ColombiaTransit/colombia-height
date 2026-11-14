@@ -1,0 +1,50 @@
+name: Trace DIMAR Linked Coastal Experience Layers
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/dimar-experience-layers.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  trace:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install existing GIS dependencies
+        run: python -m pip install -r requirements-terrain.txt -r requirements-island-inventory.txt
+      - name: Run all offline regression tests
+        run: python -m unittest discover -s tests -v
+      - name: Trace official-DIMAR-linked coastal geomorphology Experience and Web Map
+        run: python scripts/dimar_experience_layers.py --output output/dimar-experience/dimar-experience-report.json
+      - name: Verify read-only source provenance and strict release lock
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path("output/dimar-experience/dimar-experience-report.json").read_text())
+          assert r["published_ArcGIS_item_id"]=="7ccd7a8e14ed48f3a632200302fb26fb"
+          assert r["original_copernicus_selected_cogs"]==137
+          assert r["additional_candidate_cogs_reviewed_count"]==52
+          assert r["available_verified_emerged_land_polygon"] is False
+          assert r["shoreline_lines_are_not_land_polygons"] is True
+          assert r["national_publication_allowed"] is False
+          print("Experience configuration readable:",r["experience_config_readable"])
+          print("Public services found:",len(r["public_feature_and_map_services_found"]))
+          print("Official land/water mask approval remains blocked")
+          PY
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: colombia-dimar-experience-layer-provenance
+          path: output/dimar-experience/dimar-experience-report.json
+          retention-days: 1
+          if-no-files-found: error

@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-14",
+  "decision": "allow_exactly_two_verified_COGs_in_separate_reproducible_staging_manifest_only",
+  "original_source_count": 137,
+  "staging_source_count": 139,
+  "selected_production_source_count_unchanged": 137,
+  "staged_added_source_count": 2,
+  "sources": [
+    {
+      "name": "Copernicus_DSM_COG_10_N03_00_W082_00_DEM",
+      "site": "malpelo",
+      "source_cell": {
+        "latitude": 3,
+        "longitude": -82
+      },
+      "geographic_identity_primary_official": "https://www.parquesnacionales.gov.co/nuestros-parques/sff-malpelo/",
+      "geographic_evidence": "Colombia's Parques Nacionales Naturales formally administers Malpelo island and surrounding protected area; this does not certify a pixel-accurate shoreline",
+      "original_exact_OSM_island_gap_pixels": 97,
+      "real_native_COG_pixel_gaps_restored": 97,
+      "z11_z12_z13_bounded_native_samples_recovered": 869376,
+      "native_30m_boundary_samples": 350,
+      "native_30m_boundary_max_height_delta_m": 14.217,
+      "native_30m_disproportionate_gt40m_flags": 0,
+      "source_transition_missing_adjacent_pairs": 0,
+      "previously_valid_dem_height_max_change_m": 0,
+      "decision_status": "staging_only_approved_not_production"
+    },
+    {
+      "name": "Copernicus_DSM_COG_10_N03_00_W079_00_DEM",
+      "site": "gorgona",
+      "source_cell": {
+        "latitude": 3,
+        "longitude": -79
+      },
+      "geographic_identity_primary_official": "https://www.parquesnacionales.gov.co/nuestros-parques/pnn-gorgona/",
+      "geographic_evidence": "Colombia's Parques Nacionales Naturales identifies and administers Gorgona island park; this does not certify a pixel-accurate coastline",
+      "original_exact_OSM_island_gap_pixels": 86,
+      "real_native_COG_pixel_gaps_restored": 86,
+      "z11_z12_z13_bounded_native_samples_recovered": 983284,
+      "native_30m_boundary_samples": 350,
+      "native_30m_boundary_max_height_delta_m": 24.725,
+      "native_30m_disproportionate_gt40m_flags": 0,
+      "source_transition_missing_adjacent_pairs": 0,
+      "previously_valid_dem_height_max_change_m": 0,
+      "coarse_z11_gradient_flag_count": 5,
+      "coarse_flag_local_gradient_ratio_upper_bound": 1.911,
+      "decision_status": "staging_only_approved_not_production"
+    }
+  ],
+  "minor_island_baseline": {
+    "studied_Natural_Earth_polygons": 8,
+    "original_137_source_z13_reference_land_pixel_centers": 11629,
+    "missing_original_native_z13_dem_pixels": 0,
+    "native_center_sample_zero_elevation_points": 6,
+    "geographic_and_bathymetric_truth_unconfirmed": true
+  },
+  "evidence_runs": {
+    "island_exact_osm_pixel_recovery": 43594868906,
+    "minor_islands_and_multi_zoom_cog_seams": 43596436204,
+    "original_native_30m_source_border": 43596823989,
+    "original_reference_island_polygon_validation": 43593099062
+  },
+  "staging_constraints": {
+    "only_sources_in_explicit_allowlist": true,
+    "no_all_52_candidates_promotion": true,
+    "no_source_can_be_replaced_or_removed": true,
+    "no_synthetic_ocean_or_height_fill": true,
+    "quitasueno_explicitly_excluded": true,
+    "no_growing_national_manifest_without_final_release_review": true,
+    "national_terrain_rgb_publication_allowed": false
+  },
+  "next_gates": [
+    "Reconcile national native DEM source coverage using a staged 139-Copernicus-COG input and reviewed Colombia/island land polygon scope",
+    "Validate source clipping and all-zoom Terrain-RGB completeness after staging additions; do not encode native NoData as sea level",
+    "Review coastline and maritime/legal land scope using IGAC, DIMAR and official park evidence, especially smaller offshore cays",
+    "Separately decide Tumaco N01_W080 staged inclusion; it is not part of this two-island decision",
+    "Do not publish a countrywide MBTiles release before full source, ocean, cross-border and seam gates"
+  ]
+}

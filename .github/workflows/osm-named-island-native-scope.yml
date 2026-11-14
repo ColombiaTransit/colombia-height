@@ -1,0 +1,82 @@
+name: Exact OSM Named-Island Native DEM Scope QA
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/osm-named-island-native-scope.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  island-polygon-scope:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install existing terrain and OSM research dependencies
+        run: python -m pip install -r requirements-terrain.txt -r requirements-island-inventory.txt
+      - name: Run all offline tests
+        run: python -m unittest discover -s tests -v
+      - name: Restore frozen OSM national z13 evidence
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ColombiaTransit/colombia-height
+          run-id: 43573144549
+          name: colombia-osm-national-land-coverage-evidence
+          path: output
+      - name: Regenerate immutable 137-source native Copernicus manifest
+        run: |
+          python scripts/inventory.py --output output --workers 8
+          python scripts/extend_inventory.py --inventory output --islands data/colombia-island-probes.json
+          python - <<'PY'
+          import csv
+          with open('output/colombia_dem_manifest_extended.csv',newline='') as f:
+              r=list(csv.DictReader(f))
+          assert len(r)==137 and all(x['status']=='ok' for x in r)
+          print('Native DEM sources remain 137')
+          PY
+      - name: Obtain temporary original OSMCoastline polygon geometry
+        run: python scripts/osm_land_reference.py --output output/osm-reference
+      - name: Measure real missing DEM pixel centers inside exact named-island polygons
+        run: |
+          python scripts/island_osm_native_scope.py \
+            --osm-clip output/osm-reference/osm-land-study.wkb.gz \
+            --osm-metadata output/osm-reference/osm-land-study-metadata.json \
+            --osm-report output/osm-audit/osm-national-native-land-report.json \
+            --probes data/colombia-island-probes.json \
+            --manifest output/colombia_dem_manifest_extended.csv \
+            --output output/island-osm/native-island-polygon-qa.json
+      - name: Enforce no guessed island territory and no fabricated DEM heights
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('output/island-osm/native-island-polygon-qa.json').read_text())
+          assert r['selected_COG_count_unchanged']==137
+          assert r['named_island_probes_checked']==6
+          assert set(r['islands'])=={'malpelo','gorgona','gorgonilla','san_andres','providencia','santa_catalina'}
+          assert r['quitasueno_excluded'] is True
+          assert r['named_island_probe_does_not_certify_jurisdiction'] is True
+          assert r['outside_OSM_land_not_ocean'] is True
+          assert r['no_synthetic_elevations'] is True
+          assert r['COGs_promoted']==0
+          assert r['national_publication_allowed'] is False
+          assert all(v['polygon_is_not_official_territory'] for v in r['islands'].values()
+                     if v['status']=='point_contained_in_OSM_land_polygon')
+          print('Exact OSM island pixel gaps:',{k:v['missing_native_island_pixels'] for k,v in r['islands'].items()})
+          PY
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: colombia-named-island-exact-osm-native-dem-evidence
+          path: output/island-osm/native-island-polygon-qa.json
+          retention-days: 1
+          if-no-files-found: error

@@ -1,0 +1,99 @@
+name: Colombia Terrain-RGB National Draft Generator 0–13 — 32 Geographic Shards
+
+on:
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: 'prepare caches vetted source+OSM and 140-source plan; build-all runs 32 shards; merge validates full MBTiles into draft-only parts'
+        type: choice
+        required: true
+        default: prepare
+        options:
+          - prepare
+          - build-all
+          - merge
+      draft_release_tag:
+        description: 'Only DRAFT GitHub Releases, must start colombia-terrain-draft-'
+        required: true
+        type: string
+        default: colombia-terrain-draft-2026-11-14
+      prior_inputs_run:
+        description: 'Only for prepare: prior original actual Copernicus+OSM artifact run id, retains seven days'
+        required: true
+        type: string
+        default: '43624636935'
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: colombia-height-national-${{ inputs.draft_release_tag }}-${{ inputs.stage }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    if: ${{ inputs.stage == 'prepare' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+      BUILD_TAG: ${{ inputs.draft_release_tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install previously used native DEM and OSM libraries
+        run: python -m pip install -r requirements-terrain.txt -r requirements-island-inventory.txt
+      - name: Reuse original already audited OSM polygons, relation and 140-COG CSV
+        uses: actions/download-artifact@v4
+        with:
+          repository: ColombiaTransit/colombia-height
+          run-id: ${{ inputs.prior_inputs_run }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          name: colombia-osm-terrain-pilot-inputs
+          path: output
+      - name: Create immutable z0-13 plan and durable unpublished draft source bundle
+        run: bash scripts/run_national_draft_stage.sh prepare "$BUILD_TAG" 0
+
+  build-shards:
+    if: ${{ inputs.stage == 'build-all' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31]
+    env:
+      GH_TOKEN: ${{ github.token }}
+      BUILD_TAG: ${{ inputs.draft_release_tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install existing native DEM and OSM raster dependencies
+        run: python -m pip install -r requirements-terrain.txt -r requirements-island-inventory.txt
+      - name: Check actual free runner storage, reuse immutable plan, render one geographic shard and upload to draft
+        run: bash scripts/run_national_draft_stage.sh build-shard "$BUILD_TAG" '${{ matrix.shard }}'
+
+  merge:
+    if: ${{ inputs.stage == 'merge' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    env:
+      GH_TOKEN: ${{ github.token }}
+      BUILD_TAG: ${{ inputs.draft_release_tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install native Terrain-RGB/OSM mask verification libraries
+        run: python -m pip install -r requirements-terrain.txt -r requirements-island-inventory.txt
+      - name: Verify every shard and complete country OSM mask, merge atomically and split to smaller than 2 GiB draft assets
+        run: bash scripts/run_national_draft_stage.sh merge "$BUILD_TAG" 0

@@ -29,3 +29,31 @@ The six investigated land-probe names are Malpelo, Gorgona, Gorgonilla, San Andr
 - Gorgona vicinity `N03_W079`: 1,133,187 native DEM pixels recovered in 47 z13 tiles, including all 747 previously missing OSM land pixels in the matching source degree cell; this is not yet a proof of **Gorgona-island-specific** coverage.
 
 The new exact island-polygon check is designed specifically to close the last distinction.
+
+## Completed exact native island recovery — 14 November 2026
+
+[Successful native recovery workflow #43594868906](https://github.com/ColombiaTransit/colombia-height/actions/runs/43594868906) compared exact zoom-13 OSM-island pixel centers before and after temporarily adding one original GLO-30 COG per island:
+
+| Island | Omitted original GLO-30 source | Native DEM missing on island before | Real native pixels recovered | Missing afterwards | Maximum original valid height change |
+| --- | --- | ---: | ---: | ---: | ---: |
+| Malpelo | `N03_W082` | 97 | **97** | **0** | 0 m |
+| Gorgona | `N03_W079` | 86 | **86** | **0** | 0 m |
+
+The original 137-source manifest remains unchanged. This is an in-memory native COG comparison only; no invented elevations, bathymetry, source promotion or national release.
+
+## Corrected Santa Catalina / Gorgonilla probes — 14 November 2026
+
+Earlier approximate sample points were outside their OSM polygon. A separate [successful small-area OSM API coastline / original DEM workflow #43595662069](https://github.com/ColombiaTransit/colombia-height/actions/runs/43595662069) used **closed coastline way rings**, not a geographic buffer, to validate new points:
+
+| Island | Corrected probe (latitude, longitude) | Original native source inventory | z13 tiles with island polygon centers | Real valid native DEM pixel centers | Native DEM NoData on island |
+| --- | --- | --- | ---: | ---: | ---: |
+| Santa Catalina | 13.38798, -81.37467 | Original 137 COGs | 1 | **3,457** | **0** |
+| Gorgonilla | 2.93935, -78.21193 | Original 137 COGs | 2 | **1,657** | **0** |
+
+A CORALINA locality reference also fell inside the same Santa Catalina OSM polygon; a Gorgonilla lighthouse coordinate from DIMAR also fell inside the same Gorgonilla polygon. The confirmed corrected sample points are now included in [the island probe registry](../data/colombia-island-probes.json); the older points and their research provenance are retained in [the correction source file](../data/island-probe-candidate-corrections-2026-11-14.json).
+
+The exact pixel results are permanently recorded in [the island native recovery register](../data/exact-osm-island-native-recovery-2026-11-14.json).
+
+**Interpretation:** The identified four island polygons have no remaining native z13 NoData on their OSM land pixel centers *if* the two tested additional GLO-30 sources are temporarily present. The original 137 manifest, by design, still omits Malpelo and Gorgona's two extra COGs, so their production gaps are not yet fixed. The result does **not** certify Colombian legal jurisdiction, neighboring smaller cays, all zoom levels, DEM source seams or a national Mapbox Terrain-RGB release.
+
+OSM reference attribution: © OpenStreetMap contributors; ODbL 1.0; https://www.openstreetmap.org/copyright.

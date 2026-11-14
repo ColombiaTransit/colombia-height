@@ -45,7 +45,7 @@ jobs:
           done
           cat /tmp/terrain-tile-server.log
           exit 1
-      - name: Actual browser: 3D terrain + hillshade + queryTerrainElevation + screenshot
+      - name: "Actual browser 3D terrain + hillshade + queryTerrainElevation + screenshot"
         run: |
           node scripts/maplibre_coast_browser_smoke.js
           cat output/maplibre-preview/browser-smoke-result.json

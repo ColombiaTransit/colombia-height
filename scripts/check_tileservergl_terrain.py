@@ -7,6 +7,7 @@ rebuilds COGs. Rejects unrecognised/error/redirect HTML payloads.
 """
 import argparse
 import hashlib
+import gzip
 import json
 import sqlite3
 import urllib.error
@@ -16,7 +17,10 @@ from render_only_coast_rgb import COAST_MODE, decode_mask_png, decode_terrain_rg
 
 def download(url):
     with urllib.request.urlopen(url, timeout=20) as response:
-        return response.status, response.headers, response.read()
+        payload=response.read()
+        if response.headers.get("Content-Encoding","").lower()=="gzip":
+            payload=gzip.decompress(payload) # exact HTTP transport, not re-encoding Terrain RGB
+        return response.status, response.headers, payload
 
 def run(mbtiles,base_url):
     mbtiles=Path(mbtiles)

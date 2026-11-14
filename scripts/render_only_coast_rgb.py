@@ -22,6 +22,7 @@ TILE_SIZE = (256, 256)
 NODATA = -9999.0
 SEA_SURFACE_RENDER_M = 0.0
 COAST_MODE = "surface_zero_visual_only_osm_landmask_v1"
+COUNTRY_CLIP_MODE = "surface_zero_visual_only_osm_country_clip_v1"
 
 
 def decode_terrain_rgb(png):
@@ -43,11 +44,14 @@ def decode_mask_png(png):
     return gray == 255
 
 
-def encode_coast_render_only(heights, colombian_land, physical_osm_land):
+def encode_coast_render_only(heights, colombian_land, physical_osm_land,
+                             allow_offscope_flat=False):
     """Return RGB tile, accompanying factual OSM mask, and exact QA statistics.
 
-    Never interpolate/fill a native land elevation. Reject foreign physical
-    land, including at administrative borders: 0m is ONLY for OSM sea.
+    Never interpolate/fill a native Colombian land elevation. By default,
+    foreign physical land is blocked. The explicit country-clipped visual
+    mode permits a 0m OUT-OF-SCOPE background outside Colombia, recorded
+    separately from actual OSM sea, never mislabelled as bathymetry.
     """
     heights = np.asarray(heights)
     required = np.asarray(colombian_land)
@@ -59,7 +63,7 @@ def encode_coast_render_only(heights, colombian_land, physical_osm_land):
     if np.any(required & ~physical):
         raise ValueError("Colombian land may not be outside physical OSM land")
     foreign_land = physical & ~required
-    if foreign_land.any():
+    if foreign_land.any() and not allow_offscope_flat:
         raise ValueError(
             f"{int(foreign_land.sum())} foreign/out-of-country physical OSM land "
             "pixels: zero sea rendering is prohibited here")
@@ -92,14 +96,16 @@ def encode_coast_render_only(heights, colombian_land, physical_osm_land):
     if maximum_land_error > 0.051:
         raise AssertionError(f"Original land DEM changed by {maximum_land_error}m")
     if not np.all(decoded[~required] == SEA_SURFACE_RENDER_M):
-        raise AssertionError("Some sea render-only cells are not exact zero")
+        raise AssertionError("Some render-only out-of-Colombia pixels are not exact zero")
     if np.any(np.all(np.asarray(rgb_image) == 0, axis=2)):
         raise AssertionError("Forbidden RGB(0,0,0) produces -10000m fake trenches")
     info = {
-        "policy": COAST_MODE,
+        "policy": COUNTRY_CLIP_MODE if allow_offscope_flat else COAST_MODE,
         "original_valid_colombian_land_pixels": n_land,
-        "render_only_OSM_sea_surface_pixels": int((~required).sum()),
+        "render_only_OSM_sea_surface_pixels": int((~physical).sum()),
+        "render_only_offscope_foreign_land_pixels": int(foreign_land.sum()),
         "foreign_land_pixels_encoded_as_sea": 0,
+        "render_only_total_background_pixels": int((~required).sum()),
         "original_land_error_max_m": maximum_land_error,
         "auxiliary_factual_OSM_mask": "PNG grayscale (255=Colombian OSM land; 0=not Colombian OSM land)",
         "sea_surface_height_is_not_bathymetry": True,

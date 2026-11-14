@@ -16,8 +16,9 @@ body{background:#e1e8e8;font:13px sans-serif}
 <body>
 <div id="map"></div>
 <div id="legend"><b>Cartagena — actual Copernicus terrain</b>OSM land: original GLO-30 height. OSM sea: 0 m <em>visual-only surface</em>; NOT bathymetry.<div id="status">Loading MapLibre DEM source…</div></div>
-<script src="/maplibre-gl.js"></script>
-<script>
+<script type="module">
+import * as maplibregl from "/maplibre-gl.mjs";
+window.maplibregl=maplibregl;
 window.__mapErrors=[];
 window.__terrainReady=false;
 window.__loadedDemTiles=0;

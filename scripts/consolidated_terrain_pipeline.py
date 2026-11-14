@@ -253,6 +253,8 @@ def render_chunk(plan_dir, chunk_id, manifest, land_clip, land_meta,
             mbtiles, rows, sources, cache,
             (-84.0, -5.0, -66.0, 17.0),
             (min(t[0] for t in tiles), max(t[0] for t in tiles)))
+    for required_counter in ("full_land_tiles_written","mixed_coast_tiles_written","skipped_all_offland"):
+        result.setdefault(required_counter,0)
     if (result["full_land_tiles_written"] != statuses.get("fully_OSM_Colombia_land", 0)
             or result.get("mixed_coast_tiles_written", 0) != (
                 statuses.get("mixed_coastal_OSM_Colombia_land_and_offland", 0)

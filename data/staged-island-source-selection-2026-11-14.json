@@ -59,7 +59,8 @@
     "island_exact_osm_pixel_recovery": 43594868906,
     "minor_islands_and_multi_zoom_cog_seams": 43596436204,
     "original_native_30m_source_border": 43596823989,
-    "original_reference_island_polygon_validation": 43593099062
+    "original_reference_island_polygon_validation": 43593099062,
+    "countrywide_staged139_allzoom_and_exact_OSM_z13_audit": 43605294875
   },
   "staging_constraints": {
     "only_sources_in_explicit_allowlist": true,
@@ -71,10 +72,22 @@
     "national_terrain_rgb_publication_allowed": false
   },
   "next_gates": [
-    "Reconcile national native DEM source coverage using a staged 139-Copernicus-COG input and reviewed Colombia/island land polygon scope",
-    "Validate source clipping and all-zoom Terrain-RGB completeness after staging additions; do not encode native NoData as sea level",
-    "Review coastline and maritime/legal land scope using IGAC, DIMAR and official park evidence, especially smaller offshore cays",
-    "Separately decide Tumaco N01_W080 staged inclusion; it is not part of this two-island decision",
-    "Do not publish a countrywide MBTiles release before full source, ocean, cross-border and seam gates"
-  ]
+    "Countrywide staged 139-source exact z0-z13 candidate coverage and z13 OSM land reference delta is COMPLETE in GitHub Actions run 43605294875; do not repeat that audit without material source changes.",
+    "Resolve pixel-accurate Colombia-only terrestrial study mask; the remaining 23,878,663 missing z13 OSM land samples include foreign land and are NOT certified Colombia source gaps.",
+    "Review the separate Tumaco N01_W080 source and other missing genuinely Colombian shoreline gaps after geographically verified land classification.",
+    "Preserve exact original native height precedence, refuse artificial sea-level/ocean fill, and do not publish national Terrain-RGB until land, seam, source and all-zoom gates pass."
+  ],
+  "countrywide_staging_coverage_result": {
+    "status": "completed_successfully_staging_only",
+    "run_id": 43605294875,
+    "staged_candidate_tiles_z0_to_z13": 98152,
+    "staged_139_source_full_dem_coverage_tiles": 94288,
+    "staged_139_source_partial_dem_coverage_tiles": 3864,
+    "z13_legacy_source_scope_missing_osm_land_pixels_recovered": 1101,
+    "z13_expanded_source_scope_missing_osm_land_pixels_remaining": 23878663,
+    "z13_missing_outside_osm_land_unknown_not_ocean": 26564973,
+    "includes_foreign_land_in_osm_land_reference": true,
+    "IGAC_context_during_staging": "unavailable_NULL",
+    "national_publication_allowed": false
+  }
 }

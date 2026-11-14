@@ -5,7 +5,8 @@
   "evidence_runs": {
     "osm_native_z13_pixel_audit": 43573144549,
     "territorial_52_cog_triage": 43588621857,
-    "tumaco_malpelo_exact_native_z13_recovery": 43497684367
+    "tumaco_malpelo_exact_native_z13_recovery": 43497684367,
+    "gorgona_n03_w079_exact_native_z13_recovery": 43589114722
   },
   "selected_native_cogs_original": 137,
   "unselected_cog_candidates": 52,
@@ -45,9 +46,14 @@
       "review_tier": "4_named_island_study_vicinity_NOT_territory_certification",
       "missing_osm_land_pixels_inside_cog_degree_cell": 747,
       "missing_osm_and_igac_pixels_inside_degree_cell": 0,
-      "prior_native_z13_recovered_pixels": null,
+      "prior_native_z13_recovered_pixels": 1133187,
       "foreign_adm0_cell_overlaps_context_only": [],
-      "automatically_approved": false
+      "automatically_approved": false,
+      "native_z13_recovery_evidence_run": 43589114722,
+      "source_cell_native_pixels_recovered": 1133008,
+      "proven_OSM_land_missing_pixels_recovered_in_cell": 747,
+      "all_original_valid_heights_unchanged": true,
+      "source_approval_still_pending_geographic_review": true
     },
     {
       "cog": "Copernicus_DSM_COG_10_N07_00_W070_00_DEM",
@@ -598,14 +604,25 @@
     "osm_land": "Physical land reference, not national jurisdiction.",
     "foreign_geoBoundaries_adm0": "Non-authoritative foreign border *cell overlap*; not exact native DEM pixel nationality.",
     "named_islands": "Approximate study probe coordinates only; not certified polygon containment.",
-    "native_recovery": "Native GLO-30 pixels verified only for Tumaco N01 W080 and Malpelo N03 W082 as of this register.",
+    "native_recovery": "Native recovery verified for Tumaco N01 W080, Malpelo N03 W082, and Gorgona-vicinity N03 W079; geographic approval still pending.",
     "quitasueno": "Explicitly excluded by maintainer.",
     "unknown_missing_pixels": "Not ocean and must not be filled with synthetic zero or bathymetry."
   },
-  "next_candidates_for_native_QA": [
-    "Copernicus_DSM_COG_10_N03_00_W079_00_DEM"
-  ],
+  "next_candidates_for_native_QA": [],
   "source_promotion_count": 0,
   "synthetic_height_pixels": 0,
-  "national_publication_allowed": false
+  "national_publication_allowed": false,
+  "additional_targeted_native_recovery": {
+    "candidate_cog": "Copernicus_DSM_COG_10_N03_00_W079_00_DEM",
+    "source_run": 43589114722,
+    "z13_tiles_tested": 47,
+    "native_dem_pixels_recovered": 1133187,
+    "recovered_inside_source_degree_cell": 1133008,
+    "previously_missing_OSM_land_pixels_recovered_lower_bound": 747,
+    "previously_missing_OSM_land_pixels_recovered_upper_bound": 747,
+    "maximum_original_valid_height_difference_m": 0,
+    "all_existing_heights_preserved": true,
+    "international_geographic_scope_remaining": true,
+    "source_added_to_production": false
+  }
 }

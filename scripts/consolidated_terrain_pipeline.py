@@ -9,7 +9,9 @@ Thin orchestration ONLY. Reuses:
 No fresh national DEM research, no invented heights, no ocean output. Any
 mixed coast tile blocks that *chunk* before native COG downloads. The final
 merge refuses incomplete/blocked chunks, missing reports or duplicate tiles.
-Low zoom (0-8) and renderer-safe mixed coasts remain outside this stage.
+All zooms 0-13 are eligible; sea is visual-only with explicit opt-in.
+The whole-country release remains gated on proven mask coverage, completed
+shards, source-integrity and final TileServer GL validation.
 """
 import argparse
 import hashlib
@@ -27,7 +29,7 @@ from merge_regions import merge_mbtiles
 from national_tile_plan import candidate_tiles, owner, parse_manifest
 from render_only_coast_rgb import COAST_MODE, decode_mask_png
 
-MIN_SAFE_ZOOM = 9
+MIN_SAFE_ZOOM = 0
 MAX_SAFE_ZOOM = 13
 MAX_CHUNK_TILES = 1000
 MAX_PLAN_TILES = 150000
@@ -79,7 +81,7 @@ def create_plan(manifest, output_dir, minzoom=MIN_SAFE_ZOOM,
                 chunk_tiles=DEFAULT_CHUNK_TILES):
     """Reuse original candidate and shard-owner algorithms; no raster read."""
     if not MIN_SAFE_ZOOM <= minzoom <= maxzoom <= MAX_SAFE_ZOOM:
-        raise ValueError("Only z9-z13 is eligible for this inland consolidation")
+        raise ValueError("Only zoom 0 through 13 is eligible for the national Terrain-RGB generator")
     if not 1 <= shards <= 128 or not 1 <= chunk_tiles <= MAX_CHUNK_TILES:
         raise ValueError("Unsafe shard count or chunk size")
     sources = parse_manifest(manifest)
@@ -137,8 +139,9 @@ def create_plan(manifest, output_dir, minzoom=MIN_SAFE_ZOOM,
         ],
         "national_release_authorized": False,
         "unresolved": [
-            "opt-in surface-zero coastal rendering requires a real MapLibre/TileServer screenshot acceptance test",
-            "z0-z8 native terrain and full-country renderer validation",
+            "full-country native pixel/land-mask and adjacent-zoom validation for all generated shards",
+            "check foreign physical land outside Colombia and all-island coverage",
+            "validate final MBTiles via genuine TileServer GL plus MapLibre 6.8", 
         ],
     }
     atomic_json(root / "plan.json", summary)
@@ -401,7 +404,7 @@ def main():
     pp = commands.add_parser("plan", help="Use established national planner, no native raster")
     pp.add_argument("--manifest", type=Path, required=True)
     pp.add_argument("--output-dir", type=Path, required=True)
-    pp.add_argument("--minzoom", type=int, default=9)
+    pp.add_argument("--minzoom", type=int, default=0)
     pp.add_argument("--maxzoom", type=int, default=13)
     pp.add_argument("--shards", type=int, default=32)
     pp.add_argument("--chunk-tiles", type=int, default=250)

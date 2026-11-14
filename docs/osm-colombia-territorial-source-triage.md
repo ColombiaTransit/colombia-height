@@ -55,9 +55,39 @@ a definitive national land-mask classification.
   this island here. The island's geography must be confirmed separately.
 - `Copernicus_DSM_COG_10_N03_00_W079_00_DEM` (near Gorgona). **747** missing
   native DEM pixels on OSM land in the relevant degree cell. The named island
-  probe is near the cell boundary, not an exact territorial polygon. Run the
-  [targeted native source test](../.github/workflows/gorgona-edge-native-qa.yml)
-  before any source decision.
+  probe is near the cell boundary, not an exact territorial polygon. The [targeted native source test](https://github.com/ColombiaTransit/colombia-height/actions/runs/43589114722) has now succeeded; geographic review remains.
+
+## Additional native GLO-30 recovery — successful 14 November 2026
+
+[Run #43589114722](https://github.com/ColombiaTransit/colombia-height/actions/runs/43589114722)
+successfully tested the omitted source
+`Copernicus_DSM_COG_10_N03_00_W079_00_DEM` on **47** exact native
+zoom-13 XYZ tiles from the frozen OSM report.
+
+| Result | Exact native pixels |
+| --- | ---: |
+| Previously missing DEM pixels in those 47 tiles | **1,157,107** |
+| Recovered genuine original Copernicus DEM pixels | **1,133,187** |
+| DEM pixels still missing | **23,920** |
+| Recovered pixels within candidate 1° source cell | **1,133,008** |
+| Previously missing OSM-land pixels within that same source cell | **747** |
+| **Demonstrably recovered OSM-land pixels** (rigorous lower and upper bounds) | **747** |
+| Largest change to an originally valid height | **0 m** |
+
+The OSM-land recovery equals 747 without redownloading polygon geometry
+because **every one of the original 1,133,008 native-missing pixels
+inside that source degree cell was actually restored**. Thus every
+previously counted OSM-land missing pixel in that same source cell must
+be among the recovered pixels; both the mathematical lower and upper
+bounds are 747. This is stronger than a mere candidate COG footprint
+intersection, but **it is not a new per-pixel foreign/Colombian
+jurisdiction validation**.
+
+This confirms **three priority candidates with tested real native DEM
+recovery**: Tumaco N01 W080, Malpelo N03 W082, and Gorgona-vicinity
+N03 W079. The 137-source manifest remains unmodified, the source
+selection is still provisional, and no national MBTiles have been
+built or published.
 
 ## Required safeguards and next work
 

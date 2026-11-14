@@ -1,0 +1,48 @@
+name: Verify Existing OSM Country Mask at Low Zoom 0-8 — No Native Download
+
+on:
+  push:
+    paths: ['.github/workflows/verify-lowzoom-osm-mask.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  lowzoom-mask-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install existing OSM-shapely DEM decoder dependencies
+        run: python -m pip install -r requirements-terrain.txt -r requirements-island-inventory.txt
+      - name: Reuse genuine original 140-source and OSM clip artifact; no re-download
+        uses: actions/download-artifact@v4
+        with:
+          repository: ColombiaTransit/colombia-height
+          run-id: 43624636935
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          name: colombia-osm-terrain-pilot-inputs
+          path: output
+      - name: Diagnose only new zoom 0-8 OSM/Colombia foreign-land masks
+        run: |
+          python scripts/audit_lowzoom_osm.py \
+            --manifest output/stage140/colombia_dem_manifest_tumaco_staging_140.csv \
+            --osm-land-clip output/osm-reference/osm-land-study.wkb.gz \
+            --osm-land-meta output/osm-reference/osm-land-study-metadata.json \
+            --osm-country-geojson output/osm-country/colombia-relation-120027.json \
+            --output output/lowzoom/lowzoom-real-osm-mask.json \
+            --maxzoom 8
+      - name: Retain small original OSM mask classification only
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: colombia-real-lowzoom-OSM-mask-0-8-only
+          path: output/lowzoom/lowzoom-real-osm-mask.json
+          retention-days: 7
+          if-no-files-found: error

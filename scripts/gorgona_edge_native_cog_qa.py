@@ -115,8 +115,8 @@ def run(manifest,osm_json,output):
         "status":"investigation_only_not_selected",
     }]
     output=Path(output)
-    output.parent.mkdir(parents=True,exist_ok=True)
-    cache=output.parent/"native-cog-cache"
+    output.mkdir(parents=True,exist_ok=True)
+    cache=output/"native-cog-cache"
     cache.mkdir(exist_ok=True)
     opened={}
     rows=[]

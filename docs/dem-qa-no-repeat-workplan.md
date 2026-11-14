@@ -1,3 +1,11 @@
+## Generator handover and last offshore tile closure (14 November 2026)
+
+The last partial offshore Tumaco OSM country tile **13/2297/4050** is closed for **source-selection triage**: a [targeted OSM Standard rendered map audit #43614061108](https://github.com/ColombiaTransit/colombia-height/actions/runs/43614061108) showed **62,967 actual ocean-style pixels** and **2,569 administrative purple line/text pixels**, no physical land drawn. The earlier bounded Overpass shoreline check found **0 coastlines or island polygons** intersecting this tile. A rendered map is not a mathematically exact OSM land-pixel mask, so the generator must still evaluate real OSMCoastline polygons. [Permanent single-tile record](../data/final-tumaco-offshore-13-2297-4050-osm-review-2026-11-14.json). Do not repeat that tile's GLO-30 or OSM source research merely to build a renderer.
+
+**Moved to generator:** [new native 140-source OSM full-land Terrain-RGB MBTiles generator](../scripts/generate_osm_land_only_terrain.py), [passing CI #43614898356](https://github.com/ColombiaTransit/colombia-height/actions/runs/43614898356). It validates real OSM positive land and country masks, skips offland tiles and writes fully inland native elevations as Mapbox Terrain-RGB to SQLite MBTiles. A mixed shoreline tile deliberately **fails closed** because MapLibre decodes the RGB values and does not treat transparent alpha as missing height. [Generator guide and remaining integration gates](osm-land-only-terrain-generator.md). A real Colombia 140-source production pilot still needs durable **reusable already-prepared OSMCoastline land polygons**, an OSM Colombia relation geometry file, and a verified renderer-safe coastal convention.
+
+No national source reread, no global OSM coastline archive redownload, no artificial ocean bathymetry, no national release.
+
 # No-repeat DEM coverage and geographic QA worklist
 
 Updated 14 November 2026. This is the active gate register for the public ColombiaTransit/colombia-height project. It prevents further duplicative national DEM processing.

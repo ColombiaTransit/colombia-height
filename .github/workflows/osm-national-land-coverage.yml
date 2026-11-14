@@ -1,0 +1,113 @@
+name: OSM National Land Coverage Validation
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/osm-national-land-coverage.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install native DEM and OSM shapefile dependencies
+        run: python -m pip install -r requirements-terrain.txt -r requirements-island-inventory.txt
+      - name: Test safety, exact pixel masks, ODbL attribution and read-only source selection
+        run: python -m unittest discover -s tests -v
+      - name: Regenerate current 137-source Copernicus manifest from original inventory and offshore probes
+        run: |
+          python scripts/inventory.py --output output --workers 8
+          python scripts/extend_inventory.py --inventory output --islands data/colombia-island-probes.json
+          python - <<'PY'
+          import csv
+          from pathlib import Path
+          with (Path("output")/"colombia_dem_manifest_extended.csv").open(newline="") as f:
+              sources=list(csv.DictReader(f))
+          assert len(sources)==137 and len({r["name"] for r in sources})==137
+          assert all(r["status"]=="ok" for r in sources)
+          print("Original 137 selected native COGs independently confirmed")
+          PY
+      - name: Restore precisely the 32 frozen national incomplete native DEM registers
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ColombiaTransit/colombia-height
+          run-id: 43490555676
+          pattern: colombia-land-coverage-shard-*
+          merge-multiple: true
+          path: output/national-land
+      - name: Download OSMCoastline split WGS84 land archive ONCE and clip to Colombia study bbox
+        run: |
+          df -h .
+          python scripts/osm_land_reference.py --output output/osm-reference
+          df -h .
+      - name: Four-site 36-tile pilot at native z11 with official IGAC polygon cross-check
+        run: |
+          python scripts/osm_national_land_audit.py \
+            --manifest output/colombia_dem_manifest_extended.csv \
+            --osm output/osm-reference/osm-land-study.wkb.gz \
+            --osm-meta output/osm-reference/osm-land-study-metadata.json \
+            --mode pilot --output output/osm-audit
+      - name: Re-evaluate all 1,917 incomplete z13 native DEM tiles; isolate original 1,004 land-reference suspects
+        run: |
+          python scripts/osm_national_land_audit.py \
+            --manifest output/colombia_dem_manifest_extended.csv \
+            --osm output/osm-reference/osm-land-study.wkb.gz \
+            --osm-meta output/osm-reference/osm-land-study-metadata.json \
+            --incomplete output/national-land \
+            --mode national --output output/osm-audit
+      - name: Reconcile exactly 52 COG candidates and prohibit automatic land/water/height assertions
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path("output/osm-audit")
+          pilot=json.loads((p/"osm-pilot-native-land-report.json").read_text())
+          full=json.loads((p/"osm-national-native-land-report.json").read_text())
+          metadata=json.loads(Path("output/osm-reference/osm-land-study-metadata.json").read_text())
+          assert pilot["tiles_checked"]==36
+          assert set(pilot["pilot_site_summaries"])=={"tumaco","malpelo","san_andres","providencia"}
+          assert full["tiles_checked"]==1917
+          assert full["previously_identified_1004_tile_subset"]["tiles"]==1004
+          assert full["source_candidate_total"]==52
+          assert len(full["all_52_omitted_public_cog_candidates"])==52
+          assert full["selected_source_cogs"]==137
+          assert metadata["national_publication_allowed"] is False
+          assert not pilot["national_publication_allowed"]
+          assert not full["national_publication_allowed"]
+          assert full["candidate_sources_promoted"]==0
+          assert full["synthetic_ocean_heights_or_bathymetry_added"]==0
+          assert full["osm_outside_land_is_NOT_confirmed_ocean"] is True
+          assert full["osm_land_reference_is_NOT_official_territory"] is True
+          assert full["quitasueno_excluded_from_proposed_source_inclusion"] is True
+          assert all(not r["source_promoted"] for r in full["all_52_omitted_public_cog_candidates"])
+          assert all(r["native_missing_dem_pixels"] ==
+                     r["missing_inside_osm_land"] + r["missing_outside_osm_land_UNKNOWN_not_confirmed_ocean"]
+                     for r in full["per_tile"])
+          print("All 52 original candidate COGs classified as advisory only.")
+          print("Total and suspect tile counts:",full["all_checked_tile_pixel_totals"],
+                full["previously_identified_1004_tile_subset"])
+          print("OSM ODbL attribution:",full["odbl_attribution"])
+          print("NO missing DEM pixel filled, NO source automatically approved, NO release")
+          PY
+      - name: Upload tiny temporary evidence only, never raw OSM land database or native COGs
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: colombia-osm-national-land-coverage-evidence
+          path: |
+            output/osm-reference/osm-land-study-metadata.json
+            output/osm-audit/osm-pilot-native-land-report.json
+            output/osm-audit/osm-national-native-land-report.json
+          retention-days: 1
+          if-no-files-found: error

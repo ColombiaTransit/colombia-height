@@ -22,7 +22,11 @@ const out = process.env.MAPLIBRE_SMOKE_DIR || "output/maplibre-preview";
   const pngs = [];
   page.on("pageerror", e => problems.push(String(e.message || e)));
   page.on("response", r => {
-    if (r.url().includes("/tiles/") && r.status() === 200) pngs.push(r.url());
+    if (r.status() === 200 &&
+        r.url().includes(".png") &&
+        (r.url().includes("/tiles/") || r.url().includes("/data/colombia-terrain/"))) {
+      pngs.push(r.url());
+    }
   });
   try {
     const tileUrl=process.env.TERRAIN_TEST_TILES_URL || "";

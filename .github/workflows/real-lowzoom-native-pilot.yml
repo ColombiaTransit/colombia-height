@@ -1,8 +1,6 @@
 name: Real Country-Clipped Terrain-RGB Low-Zoom 0-3 — Reuse 140 COG Catalog
 
 on:
-  push:
-    paths: ['.github/workflows/real-lowzoom-native-pilot.yml']
   workflow_dispatch:
 
 permissions:

@@ -54,3 +54,17 @@ For the user-defined scope, *sea depths are not required at all*. That does **no
 No need to re-evaluate the 137, 139 or 140 source inventory or revisit the 997 old foreign land-gap tiles or 68 new Tumaco candidate tiles for this stage.
 
 © OpenStreetMap contributors, ODbL 1.0 — https://www.openstreetmap.org/copyright. Contains modified Copernicus DEM data when real COGs are encoded.
+
+## Real native free-runner pilot (14 November 2026)
+
+- Workflow: [Real Colombia OSM Land-Only Terrain-RGB Pilot](../.github/workflows/real-osm-land-terrain-pilot.yml).
+- Initial triggered run: [#43624636935](https://github.com/ColombiaTransit/colombia-height/actions/runs/43624636935); check the run for its actual final status. A started workflow is not a successful native validation.
+- Uses a standard **public** `ubuntu-24.04` runner (4 vCPU, 16 GB RAM, 14 GB nominal SSD), with a disk preflight and 180-minute job ceiling. No paid larger runners.
+- Reuses the existing successful **140-source CSV** from run #43609451961; never redoes the 137-source inventory. The original OSM global land clip was *not retained* in earlier runs; it must be prepared once from the original OSMCoastline archive before native generation.
+- Saves actual OSMCoastline land geometry, SHA256 metadata, the fetched OSM Colombia R120027 relation and the reviewed manifest as one input artifact `colombia-osm-terrain-pilot-inputs` (90-day retention). For manual reruns, specify `prepared_inputs_run_id` as the **successful previous run ID** to avoid the large OSM download and the expired original staging artifact. Keep this input artifact separate from output.
+- Bounds are the genuinely inland Antioquia region `(-75.65,6.23,-75.57,6.31)`, zoom 11–13, at most 100 candidates. The workflow fails if OSM shows any mixed/offland tile. Only intersecting native Copernicus COGs are fetched, no full 140-source archive, no DEM research.
+- Writes a real (not fixture) Mapbox Terrain-RGB SQLite MBTiles; checks all PNGs, SQLite integrity, exact mask and source provenance. The initial pilot has a 512 MiB hard *output* cap, and uploads only MBTiles plus the report as a separate 30-day artifact.
+- **No coastline/island rendering is approved** by this workflow; standard MapLibre raster-dem ignores alpha. National release remains blocked pending a reviewed coast/NoData convention and renderer compatibility checks.
+- **National build design:** stream native 256×256 source windows, split geographically into independently bounded jobs, cache/reuse each job's source COGs and geometry, and merge only after consistency checks. Do **not** place all 140 original source COGs, large OSM shapefiles and all-shard MBTiles on one 14 GB runner. GitHub Free organization artifact storage can be only 500 MB shared with Packages; do not retain large nationwide MBTiles as Actions artifacts. Estimate actual compressed output size from the native pilot before choosing distribution by release assets/external storage and caching policy.
+
+Do not rerun the previous 997-case OSM land gap scan, 68 Tumaco scan, the 137/139/140 source review, or offshore tile triangulation to generate terrain.

@@ -1,0 +1,90 @@
+name: TileServer GL Real Copernicus Coast MBTiles — API and MapLibre 6.8
+
+on:
+  push:
+    paths: ['.github/workflows/verify-tileserver-gl-terrain.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  real-tileserver-gl:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Download ONLY original verified Cartagena Terrain-RGB + OSM mask
+        uses: actions/download-artifact@v4
+        with:
+          repository: ColombiaTransit/colombia-height
+          run-id: 43628318643
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          name: colombia-cartagena-real-osm-coast-visual-only-pilot
+          path: output/cartagena-render
+      - name: Stage TileServer GL config with read-only original MBTiles file
+        run: |
+          mkdir -p output/tileservergl-test
+          cp deploy/tileserver-gl/config.json output/tileservergl-test/config.json
+          cp output/cartagena-render/cartagena-visual-terrain-rgb.mbtiles output/tileservergl-test/colombia-terrain.mbtiles
+          sha256sum output/tileservergl-test/colombia-terrain.mbtiles > output/tileservergl-test/source.sha256
+          python -m json.tool output/tileservergl-test/config.json >/dev/null
+      - name: Start FULL maptiler/tileserver-gl Docker, no custom fake proxy
+        run: |
+          docker run --detach --name colombia-terrain-tileserver \
+            -p 8080:8080 \
+            -v "$PWD/output/tileservergl-test:/data:ro" \
+            maptiler/tileserver-gl:latest --config /data/config.json
+          for i in $(seq 1 45); do
+            if curl --silent --fail http://127.0.0.1:8080/health >/dev/null; then
+              echo "Real TileServer GL online."
+              break
+            fi
+            sleep 2
+          done
+          curl --fail --show-error http://127.0.0.1:8080/health
+          docker logs --tail 60 colombia-terrain-tileserver
+      - name: Check actual TileServer GL TileJSON, byte-identical PNG, 204 offland and no source mutation
+        run: |
+          python -m pip install -r requirements-terrain.txt -r requirements-island-inventory.txt
+          python scripts/check_tileservergl_terrain.py \
+            --mbtiles output/tileservergl-test/colombia-terrain.mbtiles \
+            --base-url http://127.0.0.1:8080 \
+            | tee output/tileservergl-test/tileservergl-api-report.json
+          cd output/tileservergl-test
+          sha256sum --check source.sha256
+      - name: Chromium MapLibre GL 6.8 reads DEM through REAL TileServer GL data API
+        run: |
+          npm install --no-save maplibre-gl@6.8.0 playwright@1
+          npx playwright install --with-deps chromium
+          python scripts/serve_existing_terrain_mbtiles.py \
+            --mbtiles output/tileservergl-test/colombia-terrain.mbtiles \
+            --repo-root . --port 8765 >/tmp/colombia-browser-html-server.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8765/ >/dev/null; then break; fi
+            sleep 1
+          done
+          TERRAIN_TEST_TILES_URL='http://127.0.0.1:8080/data/colombia-terrain/{z}/{x}/{y}.png' \
+            MAPLIBRE_SMOKE_DIR=output/tileservergl-browser-preview \
+            node scripts/maplibre_coast_browser_smoke.js
+      - name: Keep only actual TileServer GL API and browser smoke reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: colombia-real-tileserver-gl-cartagena-coast-compatibility
+          path: |
+            output/tileservergl-test/tileservergl-api-report.json
+            output/tileservergl-browser-preview/*.json
+            output/tileservergl-browser-preview/*.png
+          retention-days: 7
+          if-no-files-found: warn
+      - name: Show TileServer GL final logs
+        if: always()
+        run: docker logs --tail 100 colombia-terrain-tileserver 2>/dev/null || true

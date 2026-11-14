@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-14",
+  "tile_xyz": {
+    "z": 13,
+    "x": 2297,
+    "y": 4050
+  },
+  "tile_bbox_wgs84": {
+    "west": -79.0576171875,
+    "east": -79.013671875,
+    "north": 2.021065118766994,
+    "south": 1.977146553712573
+  },
+  "native_Copernicus_stage_140_missing_tile_pixel_centers": 31232,
+  "OSM_source_scope_reference": {
+    "relation_id": 120027,
+    "coastline_small_bbox_query_run": 43611992754
+  },
+  "render_inspection": {
+    "run_id": 43614061108,
+    "url": "https://github.com/ColombiaTransit/colombia-height/actions/runs/43614061108",
+    "standard_OSM_target_url": "https://tile.openstreetmap.org/13/2297/4050.png",
+    "target_png_sha256": "de15909df5ea1109e4e5fcb4b78022a860cd537970b391cdf603b092769c2f53",
+    "standard_OSM_control_url": "https://tile.openstreetmap.org/13/2290/4050.png",
+    "control_png_sha256": "71d255be7a19736dbd84e741c3c578d10f4e13530c11487bec688935ec92b88b",
+    "rendered_ocean_reference_rgb": [
+      170,
+      211,
+      223
+    ],
+    "target_pixels_identical_to_reference_ocean_background": 62967,
+    "non_ocean_background_styled_pixels": 2569,
+    "manual_visual_review": "The 2,569 different RGB pixels represent a diagonal purple administrative border and the text Colombia. There are no rendered land areas, coastlines or islands in the entire tile. An all-ocean control tile is uniform RGB (170,211,223).",
+    "has_style_nonwater_pixels_because_administrative_boundary_label": true,
+    "nonwater_styled_pixels_do_NOT_prove_physical_land": true
+  },
+  "direct_OSM_geometry": {
+    "coastline_ways_intersect_tile": 0,
+    "closed_ccw_coastline_land_polygons_intersect_tile": 0,
+    "named_island_area_polygon_hints_intersect_tile": 0,
+    "country_relation_intersects_partly": true
+  },
+  "determination": "No mapped physical OSM land visible at z13 and no OSM coastline or island polygon intersects this tile. The remaining 31,232 native NoData pixel centers are NOT demonstrated to be required on Colombian OSM land, so this does not block the source selection.",
+  "proof_limit": "OSM Standard rendered imagery is not a raw 256x256 geometry-accurate coastline polygon mask. The eventual generator still MUST evaluate assembled OSM land polygons, and MUST fail closed if any positive Colombian land NoData pixel appears; do not label the 31,232 unknown source pixels as measured sea depth.",
+  "source_selection_ready_for_generator": true,
+  "geometry_mask_pixel_exact_certification": false,
+  "ocean_depth_or_bathymetry_required": false,
+  "no_GLO30_native_raster_regenerated": true,
+  "global_OSM_coastline_archives_redownloaded": false,
+  "latest_staging_COG_count": 140,
+  "original_prod_COG_count_unchanged": 137,
+  "no_national_Terrain_RGB_release_authorized": true,
+  "osm_attribution": "© OpenStreetMap contributors (ODbL 1.0) https://www.openstreetmap.org/copyright"
+}

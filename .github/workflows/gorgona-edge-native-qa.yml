@@ -5,6 +5,8 @@ on:
   push:
     paths:
       - '.github/workflows/gorgona-edge-native-qa.yml'
+      - 'scripts/gorgona_edge_native_cog_qa.py'
+      - 'tests/test_gorgona_edge_native_cog_qa.py'
 
 permissions:
   contents: read

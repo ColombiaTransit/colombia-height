@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Check *actual TileServer GL* reads Terrain-RGB MBTiles unchanged.
 
-Selects a genuine coastal tile and its factual OSM mask, compares served
-HTTP PNG bytes byte-for-byte with read-only SQLite. Never uses fake DEM or
+Selects real coastal tiles and their factual OSM masks, compares every
+original decoded Terrain-RGB height to TileServer GL responses pixel-by-pixel. Never uses fake DEM or
 rebuilds COGs. Rejects unrecognised/error/redirect HTML payloads.
 """
 import argparse
@@ -51,9 +51,18 @@ def run(mbtiles,base_url):
         url=f"{base_url.rstrip('/')}/data/colombia-terrain/{z}/{x}/{xyz_y}.png"
         returned_status,h,actual_png=download(url)
         if (returned_status!=200 or
-                not h.get("content-type","").startswith("image/png") or
-                actual_png!=expected_png):
-            raise AssertionError(f"TileServer GL altered/misrepresented native DEM PNG {z}/{x}/{xyz_y}")
+                not h.get("content-type","").startswith("image/png")):
+            raise AssertionError(f"TileServer GL did not serve PNG Terrain-RGB at {z}/{x}/{xyz_y}")
+        # TileServer GL is permitted to re-encode lossless PNG compression;
+        # the native 256x256 RGB elevation samples MUST remain identical.
+        actual_heights=decode_terrain_rgb(actual_png)
+        if actual_heights.shape!=heights.shape or not (actual_heights==heights).all():
+            import numpy as np
+            delta=np.abs(actual_heights-heights)
+            raise AssertionError(
+                f"TileServer GL changed actual elevations at {z}/{x}/{xyz_y}; "
+                f"max height difference {float(delta.max())}m; "
+                f"original PNG bytes {len(expected_png)}, returned {len(actual_png)}")
         all_verified+=1
         mixed_found |= bool(land.any() and (~land).any())
         full_found |= bool(land.all())
@@ -75,7 +84,7 @@ def run(mbtiles,base_url):
     if empty_status!=204 or empty_blob:
         raise AssertionError(f"Expected explicit 204 No Content for absent tile; got {empty_status}")
     report={"status":"TILESERVER_GL_RAW_PNG_PASS","tilejson_format":info["format"],
-            "tiles_byte_identical":all_verified,"verified_mixed_land_sea_tile":mixed_found,
+            "tile_height_grids_identical":all_verified,"verified_mixed_land_sea_tile":mixed_found,
             "verified_full_land_tile":full_found,
             "absent_tile_status":empty_status,
             "mapbox_terrain_rgb_256":True,

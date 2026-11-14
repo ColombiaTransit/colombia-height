@@ -11,6 +11,7 @@ import re
 import sqlite3
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.parse import urlsplit
 
 TILE_RE = re.compile(r"^/tiles/(\d+)/(\d+)/(\d+)\.png$")
 
@@ -30,7 +31,8 @@ def serve(path, port, repo_root):
 
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self):
-            tile_match = TILE_RE.fullmatch(self.path)
+            route=urlsplit(self.path).path
+            tile_match = TILE_RE.fullmatch(route)
             if tile_match:
                 z, x, y = (int(v) for v in tile_match.groups())
                 if not (0 <= z <= 13 and 0 <= x < 1 << z and 0 <= y < 1 << z):
@@ -54,7 +56,7 @@ def serve(path, port, repo_root):
                 self.end_headers()
                 self.wfile.write(blob)
                 return
-            candidate = files.get(self.path)
+            candidate = files.get(route)
             if candidate and candidate.is_file():
                 blob = candidate.read_bytes()
                 self.send_response(200)

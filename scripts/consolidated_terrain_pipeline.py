@@ -338,42 +338,60 @@ def merge_verified_chunks(plan_dir, result_dir, target):
             input_modes.add(mode[0] if mode else "strict_inland")
     if len(input_modes)!=1:
         raise ValueError("Mixed inland/coastal chunk modes: regenerate consistent shards")
-    merged = merge_mbtiles(sources, output)
-    if merged["tiles"] != actual:
-        output.unlink(missing_ok=True)
-        raise AssertionError("Merged native tile counts differ from verified reports")
-    with sqlite3.connect(output) as db:
-        if input_modes=={COAST_MODE}:
-            db.execute("""CREATE TABLE osm_land_mask(
-                zoom_level INTEGER, tile_column INTEGER, tile_row INTEGER,
-                mask_png BLOB, PRIMARY KEY(zoom_level,tile_column,tile_row))""")
-            for path in sources:
-                with sqlite3.connect(f"file:{path.resolve()}?mode=ro",uri=True) as src:
-                    for z,x,y,blob in src.execute(
-                            "SELECT zoom_level,tile_column,tile_row,mask_png FROM osm_land_mask"):
-                        decode_mask_png(blob) # verify exact binary OSM mask values
-                        db.execute("INSERT INTO osm_land_mask VALUES (?,?,?,?)",(z,x,y,blob))
-            if db.execute("SELECT COUNT(*) FROM osm_land_mask").fetchone()[0]!=actual:
-                raise AssertionError("Merge discarded part of factual OSM land masks")
-            db.execute("INSERT INTO metadata VALUES(?,?)",("coast_render_mode",COAST_MODE))
-            db.execute("INSERT INTO metadata VALUES(?,?)",("visualization_sea_surface_m","0"))
-            db.execute("INSERT INTO metadata VALUES(?,?)",("sea_surface_is_bathymetry","false"))
-            db.execute("INSERT INTO metadata VALUES(?,?)",("osm_land_mask","osm_land_mask table"))
-        db.execute("INSERT OR REPLACE INTO metadata(name,value) VALUES(?,?)",
-                   ("attribution", "Contains modified Copernicus DEM data; © OpenStreetMap contributors (ODbL 1.0)"))
-        db.execute("INSERT OR REPLACE INTO metadata(name,value) VALUES(?,?)",
-                   ("description", "Colombia inland OSM physical-land-only Terrain-RGB; mixed coast and low zoom pending, NOT a complete national release"))
-        db.commit()
-    report = {"status": "MERGED_RENDER_ONLY_NOT_NATIONAL_RELEASE" if input_modes=={COAST_MODE} else "MERGED_INLAND_ONLY_NOT_NATIONAL_RELEASE",
-              "coast_render_mode":next(iter(input_modes)),
-              "source_manifest_sha256": plan["source_manifest_sha256"],
-              "tiles": actual, "chunks_checked": len(plan["chunks"]),
-              "merged_mbtiles": str(output), "merged_sha256": sha256_file(output),
-              "national_release_authorized": False,
-              "unresolved": plan["unresolved"]}
-    atomic_json(output.with_suffix(".report.json"), report)
-    return report
-
+    if output.exists():
+        raise FileExistsError("Refuse to replace an already published/merged product")
+    tmp=output.with_name(output.name+".incomplete")
+    tmp.unlink(missing_ok=True)
+    report_path=output.with_suffix(".report.json")
+    if report_path.exists():
+        raise FileExistsError("Refuse to overwrite existing merge report")
+    try:
+        merged=merge_mbtiles(sources,tmp)
+        if merged["tiles"]!=actual:
+            raise AssertionError("Merged native tile counts differ from verified reports")
+        with sqlite3.connect(tmp) as db:
+            if input_modes=={COAST_MODE}:
+                db.execute("""CREATE TABLE osm_land_mask(
+                    zoom_level INTEGER, tile_column INTEGER, tile_row INTEGER,
+                    mask_png BLOB, PRIMARY KEY(zoom_level,tile_column,tile_row))""")
+                for path in sources:
+                    with sqlite3.connect(f"file:{path.resolve()}?mode=ro",uri=True) as src:
+                        for z,x,y,blob in src.execute(
+                                "SELECT zoom_level,tile_column,tile_row,mask_png FROM osm_land_mask"):
+                            decode_mask_png(blob) # ensure exact 0/255 factual land mask
+                            db.execute("INSERT INTO osm_land_mask VALUES (?,?,?,?)",(z,x,y,blob))
+                if db.execute("SELECT COUNT(*) FROM osm_land_mask").fetchone()[0]!=actual:
+                    raise AssertionError("Merge discarded factual OSM land masks")
+                db.execute("INSERT INTO metadata VALUES(?,?)",("coast_render_mode",COAST_MODE))
+                db.execute("INSERT INTO metadata VALUES(?,?)",("visualization_sea_surface_m","0"))
+                db.execute("INSERT INTO metadata VALUES(?,?)",("sea_surface_is_bathymetry","false"))
+                db.execute("INSERT INTO metadata VALUES(?,?)",("osm_land_mask","osm_land_mask table"))
+            db.execute("INSERT OR REPLACE INTO metadata(name,value) VALUES(?,?)",
+                       ("attribution", "Contains modified Copernicus DEM data; © OpenStreetMap contributors (ODbL 1.0)"))
+            desc=("Colombia OSM-land Copernicus Terrain-RGB; ZERO-METRE SEA is VISUAL-ONLY, not bathymetry; use factual osm_land_mask. Not a national release."
+                  if input_modes=={COAST_MODE} else
+                  "Colombia inland OSM physical-land-only Terrain-RGB; mixed coast excluded, low zoom pending, NOT a complete national release")
+            db.execute("INSERT OR REPLACE INTO metadata(name,value) VALUES(?,?)",
+                       ("description",desc))
+            db.commit()
+            if db.execute("PRAGMA integrity_check").fetchone()[0]!="ok":
+                raise AssertionError("Final combined OSM masks failed SQLite integrity")
+        report={"status":"MERGED_RENDER_ONLY_NOT_NATIONAL_RELEASE" if input_modes=={COAST_MODE} else "MERGED_INLAND_ONLY_NOT_NATIONAL_RELEASE",
+                "coast_render_mode":next(iter(input_modes)),
+                "source_manifest_sha256":plan["source_manifest_sha256"],
+                "tiles":actual,"chunks_checked":len(plan["chunks"]),
+                "merged_mbtiles":str(output),"merged_sha256":sha256_file(tmp),
+                "national_release_authorized":False,
+                "unresolved":plan["unresolved"]}
+        # The unpublishable .incomplete filename stays until all mask and
+        # metadata checks pass. A failed merge cannot leave a real MBTiles.
+        atomic_json(report_path,report)
+        tmp.replace(output)
+        return report
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        report_path.unlink(missing_ok=True)
+        raise
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)

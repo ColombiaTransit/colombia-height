@@ -21,6 +21,8 @@ from dimar_geoservice_discovery import (
 )
 
 HUB_URL = "https://datos-abiertos-dimar.hub.arcgis.com"
+OFFICIAL_LINKED_EXPERIENCE_ID = "7ccd7a8e14ed48f3a632200302fb26fb"
+EXPERIENCE_ITEM_API = "https://www.arcgis.com/sharing/rest/content/items/" + OFFICIAL_LINKED_EXPERIENCE_ID
 SEARCH = "https://www.arcgis.com/sharing/rest/search"
 QUERIES = (
     '"datos-abiertos-dimar"',
@@ -61,6 +63,26 @@ def portal_identity_from_items(items):
     return verified
 
 
+def experience_identity(session):
+    """Official DIMAR website explicitly links this Experience item ID.
+
+    If public ArcGIS metadata confirms exactly the same item ID, its orgId
+    is a verified portal-linked publisher *lead*, not a land-mask licence.
+    """
+    r = session.get(EXPERIENCE_ITEM_API, params={"f": "json"}, timeout=(10, 35))
+    r.raise_for_status()
+    item = r.json()
+    if not isinstance(item, dict) or item.get("id") != OFFICIAL_LINKED_EXPERIENCE_ID:
+        raise ValueError("DIMAR-linked ArcGIS Experience item identity mismatch")
+    org = item.get("orgId")
+    if not isinstance(org, str) or not org:
+        raise ValueError("DIMAR-linked Experience item lacks ArcGIS orgId")
+    return [{"org_id": org, "item_id": OFFICIAL_LINKED_EXPERIENCE_ID,
+             "owner": item.get("owner"),
+             "url": item.get("url"),
+             "proof": "item_id_from_official_DIMAR_ide_page"}]
+
+
 def read_search(session, q, num=80):
     r = session.get(SEARCH, params={"f":"json","q":q,"num":num,"start":1},
                     timeout=(10,35), headers={"Accept":"application/json"})
@@ -74,7 +96,7 @@ def read_search(session, q, num=80):
     return results, j.get("total",len(results))
 
 
-def shortlist(items, identity):
+def shortlist(items, identity, verified_label="ARCGIS_ORG_MATCH_TO_OFFICIAL_DIMAR_HUB_SITE"):
     """Every result retains its provenance class and unapproved status."""
     orgs = {x["org_id"] for x in identity}
     results=[]
@@ -96,7 +118,7 @@ def shortlist(items, identity):
                        ("litoral", "zona", "geografia", "costa", "isla", "playa"))):
             continue
         if item.get("orgId") in orgs:
-            provenance="ARCGIS_ORG_MATCH_TO_OFFICIAL_DIMAR_HUB_SITE"
+            provenance=verified_label
         else:
             provenance="ARCGIS_SEARCH_ONLY_PUBLISHER_UNVERIFIED"
         results.append({
@@ -128,18 +150,34 @@ def run(output):
             errors.append({"query":q,"error":str(e)[:320]})
     # Derive official organization only from a link-matched public Hub Site
     # item, *never* from an unrelated DIMAR keyword.
-    identity=portal_identity_from_items(results)
+    hub_identity=portal_identity_from_items(results)
+    app_identity=[]
+    try:
+        app_identity=experience_identity(session)
+    except (requests.RequestException,ValueError) as e:
+        errors.append({"proof":"linked_official_DIMAR_Experience",
+                       "error":str(e)[:320]})
+    if hub_identity and app_identity and hub_identity[0]["org_id"]!=app_identity[0]["org_id"]:
+        raise RuntimeError("DIMAR portal Hub and Experience item organization IDs disagree")
+    identity=hub_identity or app_identity
+    evidence_type="exact_hub_site_url" if hub_identity else (
+        "official_DIMAR_page_linked_Experience_item" if app_identity else "not_verified")
     if identity:
         org=identity[0]["org_id"]
         for q in (f"orgid:{org} AND (costa OR litoral OR isla)",
-                  f"orgid:{org} AND (linea OR geomorfologia OR poligono)"):
+                  f"orgid:{org} AND (linea OR geomorfologia OR poligono)",
+                  f"orgid:{org} AND type:\"Feature Service\"",
+                  f"orgid:{org} AND type:\"Map Service\""):
             try:
                 items,total=read_search(session,q)
                 results.extend(items)
                 queries.append({"query":q,"total":total,"retrieved":len(items)})
             except (requests.RequestException,ValueError) as e:
                 errors.append({"query":q,"error":str(e)[:320]})
-    relevant=shortlist(results,identity)
+    relevant=shortlist(results,identity,
+        verified_label=("ARCGIS_ORG_MATCH_TO_OFFICIAL_DIMAR_PORTAL_LINKED_EXPERIENCE"
+                        if evidence_type=="official_DIMAR_page_linked_Experience_item"
+                        else "ARCGIS_ORG_MATCH_TO_OFFICIAL_DIMAR_HUB_SITE"))
     candidates=load_study_candidates(
         Path("data/official-igac-source-review-2026-11-13.json"))
     report={
@@ -149,8 +187,11 @@ def run(output):
         "official_portal_links_to_hub":HUB_URL,
         "public_search_api":SEARCH,
         "queries":queries,"errors":errors,
-        "exact_official_hub_site_item_matches":identity,
-        "arcgis_item_org_verified_by_exact_hub_match":bool(identity),
+        "exact_official_hub_site_item_matches":hub_identity,
+        "official_DIMAR_portal_linked_experience_item_matches":app_identity,
+        "publisher_organization_evidence_type":evidence_type,
+        "arcgis_item_org_verified_by_exact_hub_match":bool(hub_identity),
+        "arcgis_org_verification_via_official_linked_experience":bool(app_identity),
         "coastal_or_island_search_items":relevant,
         "items_total":len(relevant),
         "provenance_counts":dict(Counter(x["provenance"] for x in relevant)),

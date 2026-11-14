@@ -1,0 +1,110 @@
+name: Incremental Only Tumaco Native GLO-30 DEM Delta 139 to 140 — No National Reruns
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/audit-tumaco-140-increment.yml'
+      - 'scripts/audit_tumaco_140_delta.py'
+      - 'tests/test_audit_tumaco_140_delta.py'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  tumaco-139-to-140-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 110
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install original GLO-30 science dependencies
+        run: python -m pip install -r requirements-terrain.txt -r requirements-island-inventory.txt
+      - name: Run exact native pixel preservation, immutable 139 and OSM uncertainty tests
+        run: python -m unittest discover -s tests -p 'test_audit_tumaco_140_delta.py' -v
+      - name: Reuse existing 139-source manifest; no national inventory rebuild
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ColombiaTransit/colombia-height
+          run-id: 43604399337
+          name: colombia-strict-staged-139-two-offshore-island-cogs
+          path: output/stage139
+      - name: Reuse just-approved 140-source Tumaco staging artifact
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ColombiaTransit/colombia-height
+          run-id: 43609451961
+          name: colombia-tumaco-strict-source-staging-140
+          path: output/stage140
+      - name: Reuse 139-source nationwide summary + previously changed tile entries
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ColombiaTransit/colombia-height
+          run-id: 43605294875
+          name: colombia-countrywide-139-cog-dem-and-osm-land-coverage-evidence
+          path: output/stage139-coverage
+      - name: Reuse original exact OSM/IGAC 137-source partial tile classification, NO land polygon download
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ColombiaTransit/colombia-height
+          run-id: 43573144549
+          name: colombia-osm-national-land-coverage-evidence
+          path: output/old-osm
+      - name: Compare only tiles intersecting the new Tumaco native COG, for all XYZ zooms z0 through z13
+        run: |
+          python scripts/audit_tumaco_140_delta.py \
+            --old output/stage139/colombia_dem_manifest_island_staging_139.csv \
+            --new output/stage140/colombia_dem_manifest_tumaco_staging_140.csv \
+            --old-report output/stage139-coverage/national-staged-139-dem-and-osm-coverage.json \
+            --old-osm output/old-osm/osm-audit/osm-national-native-land-report.json \
+            --output output/tumaco-staging-140/tumaco-139-to-140-exact-increment.json
+      - name: Strict per-zoom reconciliation, original DEM and old 139 priorities preserved, no artificial ocean or publication
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('output/tumaco-staging-140/tumaco-139-to-140-exact-increment.json').read_text())
+          assert r['prior_139_national_coverage_run']==43605294875
+          assert r['prior_137_exact_OSM_and_IGAC_pixel_run']==43573144549
+          assert r['production_native_COG_count_unmodified']==137
+          assert r['prior_staging_COG_count']==139
+          assert r['new_staging_COG_count']==140
+          assert r['old_139_candidate_tiles']==98152
+          assert r['new_140_candidate_tiles']>98152
+          assert r['new_source_only_candidate_tiles']>0
+          assert r['tiles_with_candidate_native_COG_footprint_recomputed']>0
+          assert r['source_height_preservation_exact_for_all_affected_tiles'] is True
+          assert r['all_native_study_zoom_categories_reconciled'] is True
+          assert r['no_national_137_shards_recomputed'] is True
+          assert r['no_national_139_source_coverage_recomputed'] is True
+          assert r['all_other_49_source_candidates_still_not_added'] is True
+          assert r['no_MBtiles_or_Terrain_RGB_generated'] is True
+          assert r['no_artificial_ocean_zero_DEM_or_bathymetry'] is True
+          assert r['quitasueno_excluded'] is True
+          assert r['national_Terrain_RGB_publication_allowed'] is False
+          land=r['reference_z13']
+          assert land['IGAC_not_refetched'] is True
+          assert land['OSM_Coastline_polygon_download_not_repeated'] is True
+          assert land['outside_OSM_reference_NOT_proven_ocean'] is True
+          assert land['restored_OSM_land_pixels_lower_bound']<=land['restored_OSM_land_pixels_upper_bound']
+          print('139 -> 140 actual candidate tiles:',r['old_139_candidate_tiles'],'to',r['new_140_candidate_tiles'])
+          print('Only Tumaco source influenced:',r['tiles_with_candidate_native_COG_footprint_recomputed'])
+          print('Valid native pixels restored by zoom:',r['true_native_pixel_centers_restored_in_prior_scope_by_zoom'])
+          print('OSM reference recovered lower/upper:',land['restored_OSM_land_pixels_lower_bound'],land['restored_OSM_land_pixels_upper_bound'])
+          print('NO repeat of 137/139 national QA, no OSM 1GB, no production MBTiles')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: colombia-tumaco-native-139-to-140-only-incremental-coverage
+          path: output/tumaco-staging-140/tumaco-139-to-140-exact-increment.json
+          retention-days: 1
+          if-no-files-found: warn

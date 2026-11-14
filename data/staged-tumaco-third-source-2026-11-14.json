@@ -43,5 +43,24 @@
     "Tumaco 24 original z13 tile test",
     "Tumaco 350 native edge test"
   ],
-  "next_gate": "Calculate only tiles influenced by Tumaco, subtract exact genuine native DEM recovery from verified 139 totals, separately bound OSM missing land using existing exact per-tile report. Only perform narrow original coastline review if classification still uncertain."
+  "next_gate": "Resolve geographic truth only for 27 original 139-scope ambiguous coastal/foreign-border NoData tiles and newly added 140-only Tumaco NoData with a bounded land reference; never repeat national 137/139 or original Tumaco QA; no national Terrain-RGB release.",
+  "verified_completed_runs": {
+    "source_staging_140": 43609451961,
+    "native_only_139_to_140_coverage_and_OSM_baseline_reuse": 43609826904
+  },
+  "staging_outcome": {
+    "success": true,
+    "selected_native_COGs_140": 140,
+    "source_139_precedence_unchanged": true,
+    "candidate_tiles_allzooms_140": 98904,
+    "fully_covered_allzooms_140": 94950,
+    "partially_covered_allzooms_140": 3954,
+    "new_original_scope_valid_z13_native_elevations": 460333,
+    "restored_previous_exact_OSM_land_missing_z13_pixels": 130257,
+    "restored_previous_IGAC_positive_z13_missing_pixels": 5865,
+    "remaining_original_139_study_scope_OSM_land_missing_z13_pixels": 23748406,
+    "additional_140_only_native_z13_NoData_with_unknown_land_membership": 2688103,
+    "source_countrywide_published": false,
+    "original_137_production_COG_list_untouched": true
+  }
 }

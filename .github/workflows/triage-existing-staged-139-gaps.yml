@@ -1,0 +1,90 @@
+name: Triage Existing 139-Source OSM Land Gaps by Country Reference — No Raster Rerun
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/triage-existing-staged-139-gaps.yml'
+      - 'scripts/triage_staged_139_existing_gaps.py'
+      - 'tests/test_triage_staged_139_existing_gaps.py'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  only-remaining-gaps:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install only existing GIS Python dependencies; never download Copernicus DEM/OSM
+        run: python -m pip install -r requirements-terrain.txt -r requirements-island-inventory.txt
+      - name: Test geographical whole-tile-only triage safety, no country-pixel guessing
+        run: python -m unittest discover -s tests -p 'test_triage_staged_139_existing_gaps.py' -v
+      - name: Retrieve previously verified 137-source exact OSM/IGAC native pixel report — NO source rerun
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ColombiaTransit/colombia-height
+          run-id: 43573144549
+          name: colombia-osm-national-land-coverage-evidence
+          path: output/baseline-osm
+      - name: Retrieve successful national 139-source report — NO source rerun
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ColombiaTransit/colombia-height
+          run-id: 43605294875
+          name: colombia-countrywide-139-cog-dem-and-osm-land-coverage-evidence
+          path: output/staged-139
+      - name: Classify only existing 1,005 remaining OSM land/NoData tiles by WHOLE-tile country geometry
+        run: |
+          python scripts/triage_staged_139_existing_gaps.py \
+            --osm output/baseline-osm/osm-audit/osm-national-native-land-report.json \
+            --staged output/staged-139/national-staged-139-dem-and-osm-coverage.json \
+            --output output/staged139-geography
+      - name: Reconcile original 139-source native pixel totals, exact IGAC evidence, uncertainty and release lock
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('output/staged139-geography')
+          summary=json.loads((p/'staged139-geographic-gap-triage.json').read_text())
+          roster=json.loads((p/'remaining-139-osm-land-z13-tiles.json').read_text())
+          assert summary['input_139_national_run']==43605294875
+          assert summary['input_137_exact_OSM_land_IGAC_run']==43573144549
+          assert summary['remaining_z13_OSM_land_missing_tile_count']==1005
+          assert summary['remaining_z13_OSM_land_missing_native_DEM_pixels']==23878663
+          assert roster['total']==1005
+          assert len(roster['tiles'])==1005
+          assert sum(r['missing_native_DEM_inside_OSM_land_pixels'] for r in roster['tiles'])==23878663
+          assert summary['historic_official_IGAC_positive_missing_pixels']==5865
+          assert summary['historic_official_IGAC_intersected_tiles']==2
+          assert sum(summary['categories_by_tiles'].values())==1005
+          assert sum(summary['missing_OSM_land_pixels_by_tile_reference_class'].values())==23878663
+          assert summary['old_native_COG_mask_rerun'] is False
+          assert summary['OSM_Coastline_download_or_geometry_regeneration'] is False
+          assert summary['original_137_source_inventory_regeneration'] is False
+          assert summary['139_source_inventory_recalculation'] is False
+          assert summary['actual_Copernicus_COG_downloads']==0
+          assert summary['outside_OSM_land_is_unknown_not_ocean'] is True
+          assert summary['national_Terrain_RGB_publication_allowed'] is False
+          assert summary['original_139_COG_staging_unchanged'] is True
+          print('Whole-tile location groups:',summary['categories_by_tiles'])
+          print('Only true observed jointly IGAC+OSM NoData:',summary['historic_official_IGAC_positive_missing_pixels'])
+          print('No native/OSM rescan and no national MBTiles publication')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: colombia-existing-1005-gaps-country-context-no-source-reruns
+          path: |
+            output/staged139-geography/staged139-geographic-gap-triage.json
+            output/staged139-geography/remaining-139-osm-land-z13-tiles.json
+          retention-days: 1
+          if-no-files-found: error

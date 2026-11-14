@@ -1,0 +1,36 @@
+name: Validate Opt-in MapLibre Render-Only OSM Coast Terrain
+
+on:
+  push:
+    paths:
+      - 'scripts/render_only_coast_rgb.py'
+      - 'scripts/generate_osm_land_only_terrain.py'
+      - 'tests/test_render_only_coast_rgb.py'
+      - '.github/workflows/validate-render-only-coast.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  coast-encoding:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install existing native DEM dependencies
+        run: python -m pip install -r requirements-terrain.txt -r requirements-island-inventory.txt
+      - name: Existing inland and OSM-land NoData contract regression
+        run: |
+          python -m unittest discover -s tests -p 'test_generate_osm_land_only_terrain.py' -v
+          python -m unittest discover -s tests -p 'test_osm_land_only_dem_policy.py' -v
+      - name: Verify explicit sea-surface visualization and exact mask in MBTiles
+        run: python -m unittest discover -s tests -p 'test_render_only_coast_rgb.py' -v
+      - name: Confirm optional coastline mode is explicit and strict remains default
+        run: |
+          python scripts/generate_osm_land_only_terrain.py --help | grep -F -- '--coast-render-only-sea-surface'
+          echo 'PASS: only offline fixtures; no new original DEM or OSM source scans.'

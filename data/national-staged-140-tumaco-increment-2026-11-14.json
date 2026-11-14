@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-14",
+  "repository": "ColombiaTransit/colombia-height",
+  "evidence_runs": {
+    "approved_staging_140": 43609451961,
+    "incremental_139_to_140_coverage": 43609826904,
+    "previous_139_countrywide": 43605294875,
+    "original_137_OSM_and_IGAC": 43573144549,
+    "original_tumaco_native_24_z13_tile_recovery": 43497684367,
+    "tumaco_original_30m_79W_seam_check": 43608660364
+  },
+  "immutable_inputs": {
+    "original_production_COGs": 137,
+    "previous_island_staging_COGs": 139,
+    "staged_140_COGs": 140,
+    "appended_source_name": "Copernicus_DSM_COG_10_N01_00_W080_00_DEM",
+    "selected_original_137_source_heights_unchanged": true,
+    "all_first_139_COG_source_precedence_unchanged": true
+  },
+  "nationwide_native_DEM_xyz_zoom_0_to_13": {
+    "existing_139_source_candidate_tiles": 98152,
+    "new_140_source_candidate_tiles": 98904,
+    "new_candidate_tiles_due_to_Tumaco": 752,
+    "tiles_recomputed_with_original_native_COGs": 811,
+    "fully_covered_tiles_old": 94288,
+    "fully_covered_tiles_new": 94950,
+    "partially_covered_tiles_old": 3864,
+    "partially_covered_tiles_new": 3954,
+    "actual_source_native_height_overlap_max_change_m": 0,
+    "all_original_valid_native_elevations_preserved": true,
+    "all_changed_tiles_only_in_Tumaco_COG_cell_or_native_reprojection_margin": true
+  },
+  "z13": {
+    "previous_candidate_tiles": 73166,
+    "staged_140_candidate_tiles": 73718,
+    "added_candidate_tiles": 552,
+    "old_full": 71203,
+    "old_partial": 1963,
+    "new_full": 71709,
+    "new_partial": 2009,
+    "old_139_scope_partial_z13_tiles_now_full": 22,
+    "old_139_scope_remaining_partial_z13_tiles": 1941,
+    "new_140_scope_partial_z13_tiles": 68,
+    "original_139_scope_real_Copernicus_native_sample_pixels_recovered": 460333,
+    "staged_139_native_missing_pixel_centers": 50443636,
+    "original_139_scope_native_missing_after_Tumaco": 49983303,
+    "new_140_only_scope_missing_native_pixel_centers": 2688103,
+    "staged_140_total_missing_native_pixel_centers": 52671406,
+    "OSM_reference_land": {
+      "previous_139_original_scope_missing_OSM_land_pixels": 23878663,
+      "recovered_missing_OSM_land_pixels_exact_from_frozen_per_tile_evidence": 130257,
+      "remaining_original_139_scope_missing_OSM_land_pixels": 23748406,
+      "existing_original_139_scope_tiles_with_missing_OSM_land_before": 1005,
+      "existing_original_139_scope_tiles_with_missing_OSM_land_after": 997,
+      "new_140_only_scope_unknown_OSM_land_membership_noData_samples": 2688103,
+      "whole_140_study_scope_remaining_missing_OSM_land_lower_bound": 23748406,
+      "whole_140_study_scope_remaining_missing_OSM_land_upper_bound": 26436509,
+      "note": "The first 139-source scope decrease is exact because for each changed tile recovered missing native pixels can be reconciled to the precomputed exact OSM land samples. The added 140-only tiles were never part of the previous 137/139 OSM pixel geometry audit; no new land/water or official Colombia classification can be invented."
+    },
+    "historical_IGAC_administrative_joint_missing_samples_recovered_exact": 5865,
+    "historical_IGAC_administrative_joint_missing_samples_in_original_139_scope_after": 0,
+    "original_139_gap_tiles_containing_OSM_land_before_Tumaco": 9,
+    "original_139_gap_tiles_containing_OSM_land_fully_repaired_by_Tumaco": 8,
+    "one_original_139_land_gap_tile_still_partial": {
+      "z": 13,
+      "x": 2298,
+      "y": 4073,
+      "initial_missing_OSM_land_samples": 20224,
+      "recovered_exact_OSM_land_samples": 4819,
+      "remaining_OSM_land_missing_samples": 15405
+    },
+    "new_source_COG_valid_data_over_sea_not_an_ocean_height_policy": true
+  },
+  "remaining_sources_from_original_52_advisory_pool": 49,
+  "not_recomputed": [
+    "original 32-shard 137 DEM nationwide coverage",
+    "139 DEM nationwide coverage",
+    "original 137 OSM coastline pixel rasterization",
+    "large global OSMCoastline archive download",
+    "original Tumaco 24-tile native DEM test",
+    "original Tumaco 79W native source seam test"
+  ],
+  "safety": {
+    "only_original_Copernicus_native_elevation": true,
+    "no_ocean_or_bathymetry_synthesis": true,
+    "outside_OSM_land_unknown_not_verified_ocean": true,
+    "IGAC_administrative_polygons_not_certified_fine_shoreline": true,
+    "quitasueno_excluded": true,
+    "production_137_original_COG_inventory_unchanged": true,
+    "prior_139_staging_unchanged": true,
+    "national_Terrain_RGB_publication_allowed": false
+  },
+  "next_actions": [
+    "Persist a 140-source residual geography review limited to original 139 ambiguous tiles; preserve the 140-only source NoData as geographic UNKNOWN until a narrow local land mask check, not 1GB OSM redownload",
+    "Check small Tumaco 140-only islands/coastal pixels and unresolved cross-border country assignments with authoritative land references before final country-specific release criteria",
+    "Do not expand to the other 49 omitted public source COGs automatically",
+    "Do not run a full 140-source recheck over countrywide tiles or publish national Terrain-RGB while release gates are open"
+  ]
+}

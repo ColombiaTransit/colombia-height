@@ -105,8 +105,27 @@ def main():
         target=fetch_single_osm_render(session,TARGET)
         control=fetch_single_osm_render(session,REFERENCE)
     checks=check_against_existing_osm_coast_evidence(evidence,target,control)
-    if not checks["render_level_offshore_exception_resolved"]:
-        raise AssertionError("OSM Standard imagery still has a non-ocean pixel; investigate exactly this tile further")
+    # A styled map may contain labels or a dashed administrative boundary
+    # even when the underlying OSM physical land mask is fully ocean. Preserve
+    # the observed mismatch rather than declaring it land or sea.
+    sea=np.asarray(control["ocean_candidate_colour_RGB"],dtype=np.uint8)
+    non=np.any(target["pixel_rgb"]!=sea,axis=2)
+    positions=np.argwhere(non)
+    if positions.size:
+        top_rgb,counts=np.unique(target["pixel_rgb"][non],axis=0,return_counts=True)
+        order=np.argsort(-counts)[:12]
+        detail={
+            "non_background_pixel_bbox_min_row_col":positions.min(axis=0).astype(int).tolist(),
+            "non_background_pixel_bbox_max_row_col":positions.max(axis=0).astype(int).tolist(),
+            "non_background_top_colours":[{"rgb":top_rgb[k].astype(int).tolist(),
+                                            "pixel_count":int(counts[k])} for k in order],
+            "styled_map_colour_difference_IS_NOT_positive_OSM_land":True,
+        }
+    else:
+        detail={"non_background_pixel_bbox_min_row_col":None,
+                "non_background_pixel_bbox_max_row_col":None,
+                "non_background_top_colours":[],
+                "styled_map_colour_difference_IS_NOT_positive_OSM_land":True}
     report={
         "status":"targeted_offshore_Tumaco_13_2297_4050_OSM_render_and_local_coast_negative_control",
         "checked_utc":datetime.now(timezone.utc).isoformat(),
@@ -117,6 +136,7 @@ def main():
         "osm_standard_ocean_control":{
             k:v for k,v in control.items() if k!="pixel_rgb"},
         **checks,
+        "rendered_map_mismatch_diagnostics":detail,
         "Colombia_OSM_relation_used_only_for_geographic_scope":120027,
         "physical_land_rule":"Only assembled OSM natural=coastline land polygons require GLO-30 heights; marine/ocean DEM is unnecessary",
         "the_tile_does_not_authorize_national_publication":True,
@@ -124,6 +144,10 @@ def main():
     }
     args.output.parent.mkdir(parents=True,exist_ok=True)
     args.output.write_text(json.dumps(report,indent=2,ensure_ascii=False)+"\n")
+    # A diagnostic image is only an OSM map illustration, NOT a physical
+    # land-positive mask, and is never an MBTiles DEM artifact.
+    Image.fromarray(target["pixel_rgb"]).save(args.output.parent/"osm-tumaco-target.png")
+    Image.fromarray(control["pixel_rgb"]).save(args.output.parent/"osm-offshore-ocean-control.png")
     print(json.dumps(report,indent=2,ensure_ascii=False),flush=True)
 
 

@@ -58,8 +58,7 @@ jobs:
             --mbtiles output/tileservergl-test/colombia-terrain.mbtiles \
             --base-url http://127.0.0.1:8080 \
             | tee output/tileservergl-test/tileservergl-api-report.json
-          cd output/tileservergl-test
-          sha256sum --check source.sha256
+          sha256sum --check output/tileservergl-test/source.sha256
       - name: Chromium MapLibre GL 6.8 reads DEM through REAL TileServer GL data API
         run: |
           npm install --no-save maplibre-gl@6.8.0 playwright@1

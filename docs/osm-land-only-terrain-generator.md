@@ -1,4 +1,10 @@
-# First working OSM land-only Terrain-RGB generator (inland-safe pilot)
+# OSM Colombian land Terrain-RGB: strict original and opt-in coastline pilot
+
+**Current status (14 November 2026):** Strict inland generation remains the default; **option 1, a rendering-only 0 m sea surface plus a separate factual OSM land mask, has now been implemented and validated with actual Copernicus samples.** See the [canonical consolidated pipeline](consolidated-terrain-pipeline.md). The [real Cartagena mixed-coast run #43628318643](https://github.com/ColombiaTransit/colombia-height/actions/runs/43628318643) succeeded: 28 candidates, 26 emitted (17 mixed coast + 9 full land), 2 offland correctly omitted, 1,142,998 genuine land pixels retained within 0.05 m, and 560,938 visual-only sea pixels encoded at exactly 0 m. Every emitted tile has an accompanying factual `osm_land_mask` SQLite row, so that a consumer can distinguish original land elevation from sea render-only display pixels. This is **not bathymetry** and is **not** a fully validated MapLibre/TileServer GL browser screenshot or nationwide release.
+
+Activate the experimental mode explicitly by appending `--coast-render-only-sea-surface` to the existing generator command. If any land pixel has missing real height, or an out-of-country physical land pixel is being misclassified as water, it fails. Never add `--coast-render-only-sea-surface` to an output intended to provide scientific bathymetry or unmasked elevation for all pixels. The original strict-only notes below remain as a historical explanation of the default behavior.
+
+## Historical strict-mode implementation (before option 1)
 
 **Date:** 14 November 2026. **Status:** code implemented and unit/SQLite integration verified; **not a national MBTiles release**.
 

@@ -162,8 +162,7 @@ def run(manifest, candidates_file, output):
     results = {}
     for entry in candidates:
         site = entry["id"]
-        probes = [{"lon": p["lon"], "lat": p["lat"]} if "lon" in p else
-                  {"lon": p["lon"], "lat": p["lat"]}
+        probes = [{"lon": p["lon"], "lat": p["lat"]}
                   for p in entry["research_probes"]]
         bbox = bbox_for_probes(probes)
         item = {

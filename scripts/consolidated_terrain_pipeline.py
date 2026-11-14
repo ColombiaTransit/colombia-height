@@ -16,6 +16,7 @@ shards, source-integrity and final TileServer GL validation.
 import argparse
 import hashlib
 import json
+import shutil
 import sqlite3
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
@@ -281,6 +282,136 @@ def render_chunk(plan_dir, chunk_id, manifest, land_clip, land_meta,
     return report
 
 
+
+def _check_disk(path, min_free_gib, description):
+    free = shutil.disk_usage(Path(path)).free
+    gib = free / (1024 ** 3)
+    print(json.dumps({"disk_check": description, "available_GiB": round(gib, 2),
+                      "minimum_GiB": min_free_gib}), flush=True)
+    if gib < min_free_gib:
+        raise RuntimeError(
+            f"Insufficient free runner disk for {description}: {gib:.2f}GiB "
+            f"< {min_free_gib:.2f}GiB. Do not assume all GitHub runners "
+            "offer the previously observed ~85GiB of free space.")
+    return gib
+
+
+def render_shard(plan_dir, shard_id, manifest, land_clip, land_meta,
+                 country_json, output_dir, cache, coast_render_surface=False,
+                 country_clip_background=False, start_free_gib=25,
+                 reserve_free_gib=10):
+    """Resume only missing immutable chunks of one shard with shared OSM clip/cache.
+
+    The native writer is the original one, and this operation NEVER starts
+    a new source inventory. Records remain local until saved to durable
+    storage; no temporary Actions artifacts are a valid country release.
+    """
+    plan = load_plan(Path(plan_dir) / "plan.json")
+    if not isinstance(shard_id,int) or isinstance(shard_id,bool) or not (0<=shard_id<plan["shards"]):
+        raise ValueError("Invalid shard ID")
+    if country_clip_background and not coast_render_surface:
+        raise ValueError("Country-clipped background requires coast render mode")
+    if not 0 <= reserve_free_gib <= start_free_gib:
+        raise ValueError("Invalid runner free-disk limits")
+    if sha256_file(manifest) != plan["source_manifest_sha256"]:
+        raise ValueError("Source inventory hash drift since planning")
+    paths = [chunk for chunk in plan["chunks"] if chunk["shard"]==shard_id]
+    if not paths:
+        raise ValueError(f"Shard {shard_id} has no candidate tiles")
+    output_dir = Path(output_dir)
+    cache = Path(cache)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    cache.mkdir(parents=True, exist_ok=True)
+    _check_disk(output_dir, start_free_gib, "start shard")
+    physical, meta = load_osm_coastline_land(land_clip, land_meta)
+    country = load_osm_country(country_json)
+    geometry = (physical,meta,country)
+    expected_mode=(COUNTRY_CLIP_MODE if country_clip_background else
+                   COAST_MODE if coast_render_surface else "strict_inland")
+    total=0
+    skipped=0
+    rerendered=0
+    reused=0
+    for info in paths:
+        _check_disk(output_dir,reserve_free_gib,f"before chunk {info['id']}")
+        report_path=output_dir / f"chunk-{info['id']}.report.json"
+        tiles_path=output_dir / f"chunk-{info['id']}.mbtiles"
+        if report_path.exists():
+            report=json.loads(report_path.read_text())
+            if (report.get("chunk_id")!=info["id"]
+                    or report.get("chunk_sha256")!=info["sha256"]
+                    or report.get("source_manifest_sha256")!=plan["source_manifest_sha256"]
+                    or report.get("physical_OSM_sha256")!=meta["reference_wkb_sha256"]
+                    or report.get("coast_render_mode")!=expected_mode):
+                raise ValueError(f"Existing evidence for chunk {info['id']} conflicts with immutable plan")
+            if report["status"]=="SKIPPED_no_Colombian_OSM_land":
+                if tiles_path.exists() or report.get("skipped_all_offland")!=info["tiles"]:
+                    raise ValueError("Incomplete or polluted offland-only shard")
+                skipped+=info["tiles"]
+            elif report["status"] in ("SUCCESS_inland_only","SUCCESS_render_only_coast"):
+                if report.get("mbtiles_sha256")!=sha256_file(tiles_path):
+                    raise ValueError(f"Cached MBTiles SHA256 changed for {info['id']}")
+                with sqlite3.connect(f"file:{tiles_path.resolve()}?mode=ro",uri=True) as db:
+                    if db.execute("PRAGMA integrity_check").fetchone()[0]!="ok":
+                        raise ValueError("Existing chunk SQLite not valid")
+                    actual=db.execute("SELECT COUNT(*) FROM tiles").fetchone()[0]
+                if actual!=(report.get("full_land_tiles_written",0)+
+                             report.get("mixed_coast_tiles_written",0)):
+                    raise ValueError("Previously completed chunk tile counts changed")
+                total+=actual
+                skipped+=report.get("skipped_all_offland",0)
+            else:
+                raise RuntimeError(f"Previous chunk {info['id']} blocked; stop and resolve, never silently retry")
+            reused+=1
+            print(f"REUSED verified chunk {info['id']}, no DEM re-download",flush=True)
+            continue
+        if tiles_path.exists():
+            raise FileExistsError(f"Unreported MBTiles {tiles_path}: refuse overwrite")
+        report=render_chunk(
+            plan_dir,info["id"],manifest,land_clip,land_meta,
+            country_json,output_dir,cache,
+            coast_render_surface=coast_render_surface,
+            country_clip_background=country_clip_background,
+            prepared_geometry=geometry)
+        total+=report.get("full_land_tiles_written",0)+report.get("mixed_coast_tiles_written",0)
+        skipped+=report.get("skipped_all_offland",0)
+        rerendered+=1
+    expected=sum(info["tiles"] for info in paths)
+    if total+skipped!=expected:
+        raise AssertionError(f"Shard {shard_id}: {total}+{skipped} != {expected}")
+    summary={
+        "schema":"colombia-terrain-shard-complete-v1",
+        "shard":shard_id,
+        "complete":True,
+        "total_candidate_tiles":expected,
+        "written_native_terrain_tiles":total,
+        "skipped_no_Colombian_OSM_land":skipped,
+        "chunk_count":len(paths),
+        "reused_chunks":reused,
+        "newly_processed_chunks":rerendered,
+        "coast_render_mode":expected_mode,
+        "source_manifest_sha256":plan["source_manifest_sha256"],
+        "physical_OSM_sha256":meta["reference_wkb_sha256"],
+        "max_available_disk_GiB_current":round(shutil.disk_usage(output_dir).free/1024**3,2),
+        "national_release_authorized":False,
+    }
+    summary_path=output_dir/f"shard-{shard_id:03d}.summary.json"
+    if summary_path.exists() and json.loads(summary_path.read_text())!=summary:
+        # Recomputed dynamic stats (reused counts / disk) need not match;
+        # preserve first correct signed-off shard evidence without overwriting.
+        previous=json.loads(summary_path.read_text())
+        for invariant in ("total_candidate_tiles","written_native_terrain_tiles",
+                          "skipped_no_Colombian_OSM_land","coast_render_mode",
+                          "source_manifest_sha256","physical_OSM_sha256"):
+            if previous.get(invariant)!=summary[invariant]:
+                raise ValueError("Existing shard completion evidence conflicts")
+    else:
+        if not summary_path.exists():
+            atomic_json(summary_path,summary)
+    print(json.dumps(summary,indent=2),flush=True)
+    return summary
+
+
 def merge_verified_chunks(plan_dir, result_dir, target):
     """Reuse existing SQLite merger only after *every* OSM shard passes."""
     plan = load_plan(Path(plan_dir) / "plan.json")
@@ -436,6 +567,19 @@ def main():
                         help="Explicit visualization-only 0m sea with original OSM land mask; not bathymetry")
     render.add_argument("--render-flat-outside-colombia",action="store_true",
                         help="Explicit nationwide display only: foreign land outside Colombia is 0m FLAT BACKGROUND, not sea")
+    shard = commands.add_parser("shard", help="Resume one planned shard and cache original source COGs across its chunks")
+    shard.add_argument("--plan-dir",type=Path,required=True)
+    shard.add_argument("--shard-id",type=int,required=True)
+    shard.add_argument("--manifest",type=Path,required=True)
+    shard.add_argument("--osm-land-clip",type=Path,required=True)
+    shard.add_argument("--osm-land-meta",type=Path,required=True)
+    shard.add_argument("--osm-country-geojson",type=Path,required=True)
+    shard.add_argument("--output-dir",type=Path,required=True)
+    shard.add_argument("--cache",type=Path,default=Path("output/native-cog-cache"))
+    shard.add_argument("--coast-render-only-sea-surface",action="store_true")
+    shard.add_argument("--render-flat-outside-colombia",action="store_true")
+    shard.add_argument("--start-free-gib",type=float,default=25)
+    shard.add_argument("--reserve-free-gib",type=float,default=10)
     merge = commands.add_parser("merge", help="Reuse original duplicate-safe MBTiles merger")
     merge.add_argument("--plan-dir", type=Path, required=True)
     merge.add_argument("--result-dir", type=Path, required=True)
@@ -450,6 +594,15 @@ def main():
                      args.osm_country_geojson, args.output_dir, args.cache,
                      coast_render_surface=args.coast_render_only_sea_surface,
                      country_clip_background=args.render_flat_outside_colombia)
+    elif args.command=="shard":
+        render_shard(
+            args.plan_dir,args.shard_id,args.manifest,
+            args.osm_land_clip,args.osm_land_meta,args.osm_country_geojson,
+            args.output_dir,args.cache,
+            coast_render_surface=args.coast_render_only_sea_surface,
+            country_clip_background=args.render_flat_outside_colombia,
+            start_free_gib=args.start_free_gib,
+            reserve_free_gib=args.reserve_free_gib)
     else:
         merge_verified_chunks(args.plan_dir, args.result_dir, args.output)
 

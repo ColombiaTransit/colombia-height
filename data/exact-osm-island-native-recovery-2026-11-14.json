@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "run_id": 43594868906,
+  "run_url": "https://github.com/ColombiaTransit/colombia-height/actions/runs/43594868906",
+  "evidence_created_utc": "2026-11-14T12:29:02.949648+00:00",
+  "selected_original_COGs": 137,
+  "scope": "two exact named island OSM polygon native pixel recovery tests; islands are not jurisdiction-certified",
+  "recovered_source_qa": {
+    "malpelo": {
+      "unselected_COG": "Copernicus_DSM_COG_10_N03_00_W082_00_DEM",
+      "tiles_z13": 2,
+      "original_missing_OSM_island_pixels": 97,
+      "recovered_real_GLO30_pixels": 97,
+      "remaining_native_missing_OSM_island_pixels": 0,
+      "max_original_valid_elevation_change_m": 0
+    },
+    "gorgona": {
+      "unselected_COG": "Copernicus_DSM_COG_10_N03_00_W079_00_DEM",
+      "tiles_z13": 2,
+      "original_missing_OSM_island_pixels": 86,
+      "recovered_real_GLO30_pixels": 86,
+      "remaining_native_missing_OSM_island_pixels": 0,
+      "max_original_valid_elevation_change_m": 0
+    }
+  },
+  "corrected_reference_point_leads": {
+    "santa_catalina": {
+      "old_lat": 13.38,
+      "old_lon": -81.375,
+      "corrected_lat": 13.38798,
+      "corrected_lon": -81.37467,
+      "osm_polygon_candidate_bbox_lonlat": [
+        -81.3808804,
+        13.3814495,
+        -81.3684559,
+        13.3945076
+      ],
+      "from_20261114_native_run": "nearby_polygon_lead_NOT_proof_of_exact_membership",
+      "pending": "verify exact OSM polygon contains corrected probe"
+    },
+    "gorgonilla": {
+      "old_lat": 2.93,
+      "old_lon": -78.19,
+      "corrected_lat": 2.93935,
+      "corrected_lon": -78.21193,
+      "osm_polygon_candidate_bbox_lonlat": [
+        -78.2189414,
+        2.9324548,
+        -78.2083708,
+        2.9438351
+      ],
+      "from_20261114_native_run": "nearby_polygon_lead_NOT_proof_of_exact_membership",
+      "pending": "verify exact OSM polygon contains corrected probe"
+    }
+  },
+  "publication_gates": {
+    "no_source_promoted_to_manifest": true,
+    "all_native_existing_valid_heights_preserved": true,
+    "no_ocean_fill_or_artificial_heights": true,
+    "quitasueno_excluded": true,
+    "national_publication_allowed": false,
+    "named_island_proximity_not_territorial_proof": true
+  },
+  "source_attribution": "© OpenStreetMap contributors; ODbL 1.0; https://www.openstreetmap.org/copyright"
+}

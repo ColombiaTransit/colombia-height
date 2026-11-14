@@ -1,8 +1,6 @@
 name: Real Cartagena OSM Mixed-Coast Terrain-RGB — Visual Sea Surface Pilot
 
 on:
-  push:
-    paths: ['.github/workflows/real-coast-render-pilot.yml']
   workflow_dispatch:
 
 permissions:

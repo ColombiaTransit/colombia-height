@@ -269,6 +269,102 @@ class ConsolidatedTerrainTests(unittest.TestCase):
             np.testing.assert_allclose(decoded[land],heights[land],atol=0.051)
             self.assertTrue((decoded[~land]==0).all())
 
+    def test_resumable_shard_reuses_only_existing_validated_chunks(self):
+        from consolidated_terrain_pipeline import render_shard
+        plan=self.make_plan()
+        land=np.ones((256,256),bool)
+        def masks(tiles,osm,country):
+            return ({"fully_OSM_Colombia_land":len(tiles)},
+                    [{"tile":t,"mask":land,"status":"fully_OSM_Colombia_land",
+                      "land_pixels":65536} for t in tiles])
+        m1,m2=self.geometry_mocks()
+        with m1,m2,patch("consolidated_terrain_pipeline.prepare_plan",
+                         side_effect=masks),patch(
+                             "consolidated_terrain_pipeline.write_inland_mbtiles",
+                             side_effect=self.fake_write) as writer:
+            s=render_shard(
+                self.plan_dir,0,self.manifest,self.root/"land.wkb.gz",
+                self.root/"land.json",self.root/"country.json",
+                self.results,self.cached,start_free_gib=0,reserve_free_gib=0)
+            self.assertEqual(s["newly_processed_chunks"],len([
+                c for c in plan["chunks"] if c["shard"]==0]))
+            self.assertEqual(s["reused_chunks"],0)
+            calls=writer.call_count
+            again=render_shard(
+                self.plan_dir,0,self.manifest,self.root/"land.wkb.gz",
+                self.root/"land.json",self.root/"country.json",
+                self.results,self.cached,start_free_gib=0,reserve_free_gib=0)
+            self.assertEqual(again["newly_processed_chunks"],0)
+            self.assertEqual(again["reused_chunks"],calls)
+            self.assertEqual(writer.call_count,calls)
+            self.assertEqual(again["written_native_terrain_tiles"],
+                             s["written_native_terrain_tiles"])
+
+    def test_disk_budget_blocks_native_shard_before_source_download(self):
+        from consolidated_terrain_pipeline import render_shard
+        from collections import namedtuple
+        self.make_plan()
+        usage=namedtuple("usage","total used free")
+        with patch("consolidated_terrain_pipeline.shutil.disk_usage",
+                   return_value=usage(20*1024**3,18*1024**3,2*1024**3)),patch(
+                       "consolidated_terrain_pipeline.load_osm_coastline_land") as reader:
+            with self.assertRaisesRegex(RuntimeError,"Insufficient free runner disk"):
+                render_shard(
+                    self.plan_dir,0,self.manifest,self.root/"land.wkb.gz",
+                    self.root/"land.json",self.root/"country.json",
+                    self.results,self.cached,start_free_gib=25,reserve_free_gib=10)
+            reader.assert_not_called()
+
+    def test_country_flat_mode_preserves_masks_and_foreign_not_sea(self):
+        from render_only_coast_rgb import COUNTRY_CLIP_MODE,decode_mask_png,decode_terrain_rgb
+        plan=self.make_plan()
+        land=np.zeros((256,256),bool)
+        land[:,:128]=True
+        physical=land.copy()
+        physical[:,200:202]=True
+        heights=np.full((256,256),-9999,dtype=np.float32)
+        heights[land]=10.3
+        def masks(tiles,osm,country,include_physical=False):
+            self.assertTrue(include_physical)
+            return ({"mixed_coastal_OSM_Colombia_land_and_offland":len(tiles),
+                     "mixed_foreign_physical_OSM_land_blocked":len(tiles)},
+                    [{"tile":t,"mask":land,"physical_mask":physical,
+                      "land_pixels":int(land.sum()),
+                      "status":"mixed_coastal_OSM_Colombia_land_and_offland"} for t in tiles])
+        m1,m2=self.geometry_mocks()
+        with m1,m2,patch("consolidated_terrain_pipeline.prepare_plan",
+                          side_effect=masks),patch(
+                              "generate_osm_land_only_terrain.intersecting_source_indices",
+                              return_value=[0]),patch(
+                              "generate_osm_land_only_terrain.local_cogs",
+                              return_value=["cached-original"]),patch(
+                              "generate_osm_land_only_terrain.warp_sources",
+                              return_value=(heights,np.ones_like(heights,dtype=np.uint8),0,0)):
+            for chunk in plan["chunks"]:
+                report=render_chunk(
+                    self.plan_dir,chunk["id"],self.manifest,
+                    self.root/"unused-osm-clip",self.root/"unused-land-meta",
+                    self.root/"unused-country",self.results,self.cached,
+                    coast_render_surface=True,country_clip_background=True)
+                self.assertEqual(report["status"],"SUCCESS_render_only_coast")
+                self.assertEqual(report["coast_render_mode"],COUNTRY_CLIP_MODE)
+                self.assertEqual(report["render_only_offscope_foreign_land_pixels"],
+                                 512*chunk["tiles"])
+        merged=merge_verified_chunks(
+            self.plan_dir,self.results,self.root/"country-flat.mbtiles")
+        self.assertEqual(merged["coast_render_mode"],COUNTRY_CLIP_MODE)
+        with sqlite3.connect(self.root/"country-flat.mbtiles") as db:
+            metadata=dict(db.execute("SELECT name,value FROM metadata"))
+            self.assertEqual(metadata["foreign_land_is_sea"],"false")
+            self.assertEqual(metadata["foreign_land_visual_background_m"],"0")
+            image,mask=db.execute(
+                "SELECT t.tile_data,m.mask_png FROM tiles t JOIN osm_land_mask m "
+                "USING(zoom_level,tile_column,tile_row) LIMIT 1").fetchone()
+        np.testing.assert_array_equal(decode_mask_png(mask),land)
+        out=decode_terrain_rgb(image)
+        np.testing.assert_allclose(out[land],heights[land],atol=0.051)
+        self.assertTrue((out[~land]==0.0).all())
+
     def test_bad_mask_file_cannot_leave_publishable_merged_mbtiles(self):
         from consolidated_terrain_pipeline import sha256_file
         plan=self.make_plan()

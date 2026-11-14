@@ -1,0 +1,66 @@
+name: OSM-Only Colombia Land Gate — Reuse 27+68 Native Cases, No Ocean/DEM Rebuild
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/osm-only-final-land-scope.yml'
+      - 'scripts/osm_only_colombia_land_finish.py'
+      - 'tests/test_osm_only_colombia_land_finish.py'
+
+permissions:
+  contents: read
+
+jobs:
+  osm-only-physical-land:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install existing geometrical source dependencies only
+        run: python -m pip install -r requirements-terrain.txt -r requirements-island-inventory.txt
+      - name: Validate no sea, coastline/country confusion or repeated data loads
+        run: python -m unittest discover -s tests -p 'test_osm_only_colombia_land_finish.py' -v
+      - name: Fetch only one OSM country relation and a tiny local OSM coastline query; reuse preexisting 27+68 exact native pixel counts
+        run: |
+          python scripts/osm_only_colombia_land_finish.py \
+            --old-register data/staged140-residual-geography-2026-11-14.json \
+            --new-register data/tumaco140-new-tiles-geo-reference-2026-11-14.json \
+            --output output/osm-only-land-finish/osm-colombia-land-scope.json
+      - name: Fail closed if exact old land counters/new native counters or OSM reference/Ocean policy changed
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          f=Path('output/osm-only-land-finish/osm-colombia-land-scope.json')
+          a=json.loads(f.read_text())
+          assert a['land_reference']=='OpenStreetMap country relation 120027 and OSM natural=coastline, not geoBoundaries, not IGAC'
+          assert a['country_relation']['osm_relation']==120027
+          assert len(a['old_known_OSM_land_27_tiles'])==27
+          assert len(a['new_140_only_68_tiles'])==68
+          assert sum(a['old_known_OSM_land_missing_pixels_by_country_scope'].values())==394622
+          assert sum(a['new_140_only_native_NoData_by_country_scope'].values())==2688103
+          assert a['no_OSM_global_land_polygon_archive_repeated']
+          assert a['no_national_137_139_140_source_coverage_rerun']
+          assert a['no_source_manifest_mutation']
+          assert a['project_scope_land_only']
+          assert a['sea_bathymetry_not_relevant']
+          assert a['ocean_tiles_do_not_require_a_DEM_elevation']
+          assert a['no_ocean_bathymetry_or_synthetic_height_added']
+          assert a['national_release_approved'] is False
+          print('Old 27 OSM land missing by OSM country relation:',a['old_known_OSM_land_missing_pixels_by_country_scope'])
+          print('New 68 native NoData by OSM country relation:',a['new_140_only_native_NoData_by_country_scope'])
+          print('Bounded OSM coastline way count:',a['OSM_bounded_coastline_way_count'])
+          print('Only LAND in DEM scope, NO seawater/bathymetry fill, NO global OSM/COG redownload')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: colombia-osm-only-final-land-scope-without-native-reruns
+          path: output/osm-only-land-finish/osm-colombia-land-scope.json
+          retention-days: 1
+          if-no-files-found: error

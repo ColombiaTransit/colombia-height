@@ -1,0 +1,115 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-14",
+  "status": "completed_bounded_ADM0_reference_screen_no_native_rerun",
+  "source_repository": "ColombiaTransit/colombia-height",
+  "workflow_run": 43610928437,
+  "workflow_url": "https://github.com/ColombiaTransit/colombia-height/actions/runs/43610928437",
+  "reused_native_source_result_run": 43609826904,
+  "source_inventory": {
+    "original_production_COGs": 137,
+    "staged_COGs": 140,
+    "changed_or_promoted_COGs_in_this_check": 0
+  },
+  "studied_scope": {
+    "new_140_only_z13_candidate_tiles": 552,
+    "new_140_only_z13_incomplete_tiles": 68,
+    "original_native_NoData_pixel_centers": 2688103,
+    "previous_139_source_scope_ambiguous_tiles_reused_not_rerun": 27,
+    "previous_139_scope_ambiguous_OSM_land_missing_pixels_reused": 394622
+  },
+  "reference": {
+    "source": "geoBoundaries gbOpen ADM0",
+    "countries": [
+      "COL",
+      "ECU"
+    ],
+    "boundary_IDs": {
+      "COL": "COL-ADM0-68469763",
+      "ECU": "ECU-ADM0-53374128"
+    },
+    "method": "Whole XYZ tile containment or partial positive area contact only; NOT fine-scale coast, ocean, legal boundary, or pixel country attribution",
+    "licensed": "CC0 1.0"
+  },
+  "groups": {
+    "full_tile_inside_Ecuador_reference_only": {
+      "tiles": 11,
+      "noData_samples": 549120,
+      "z": 13,
+      "y": 4073,
+      "x_range_inclusive": [
+        2287,
+        2297
+      ],
+      "NoData_per_tile": 49920
+    },
+    "partially_intersects_Ecuador_reference_only": {
+      "tiles": 6,
+      "noData_samples": 299520,
+      "z": 13,
+      "y": 4073,
+      "x_range_inclusive": [
+        2281,
+        2286
+      ],
+      "NoData_per_tile": 49920
+    },
+    "no_COL_or_ECU_ADM0_polygon_contact_unknown_not_ocean": {
+      "tiles": 51,
+      "noData_samples": 1839463,
+      "compressed_tile_roster": [
+        {
+          "z": 13,
+          "y": 4050,
+          "x": 2275,
+          "NoData": 50126
+        },
+        {
+          "z": 13,
+          "y": 4050,
+          "x_min": 2276,
+          "x_max": 2297,
+          "NoData_each": 31232
+        },
+        {
+          "z": 13,
+          "y_min": 4051,
+          "y_max": 4072,
+          "x": 2275,
+          "NoData_each": 36096
+        },
+        {
+          "z": 13,
+          "y": 4073,
+          "x": 2275,
+          "NoData": 58521
+        },
+        {
+          "z": 13,
+          "y": 4073,
+          "x_min": 2276,
+          "x_max": 2280,
+          "NoData_each": 49920
+        }
+      ]
+    }
+  },
+  "other_27_old_scope_tiles": {
+    "worklist": "data/staged140-residual-geography-2026-11-14.json",
+    "unresolved_OSM_land_missing_pixels": 394622,
+    "rerun": false
+  },
+  "conclusions": {
+    "no_new_missing_z13_tile_has_colombia_ADM0_positive_polygon_contact_in_this_reference": true,
+    "whole_tile_Ecuador_reference_is_not_official_sovereignty_or_coastline": true,
+    "no_contact_does_not_prove_water": true,
+    "no_false_COL_missing_height_claim": true,
+    "no_0m_ocean_fill": true,
+    "no_original_valid_native_elevations_modified": true,
+    "no_global_OSM_data_retrieval": true,
+    "no_Copernicus_native_GLO30_recalculation": true,
+    "quitasueno_excluded": true,
+    "national_Terrain_RGB_publication_allowed": false
+  },
+  "next_bounded_work": "Investigate only genuine small-island/coastline risk for the 51 no-ADM0-contact tiles and 6 partial Ecuador tiles with a regional shoreline/islet reference; use original native 140 per-tile NoData counts and avoid national/native/GLO30 scans. Keep the already catalogued 27 old ambiguous tiles separate until there is a reliable higher-resolution geographical land mask; not every cross-border OSM land pixel is Colombia."
+}

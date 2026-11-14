@@ -192,8 +192,10 @@ def render_chunk(plan_dir, chunk_id, manifest, land_clip, land_meta,
     require_verified_staging(sources)
     physical, meta = load_osm_coastline_land(land_clip, land_meta)
     country = load_osm_country(country_json)
-    statuses, rows = prepare_plan(
-        tiles, physical, country, include_physical=coast_render_surface)
+    if coast_render_surface:
+        statuses, rows = prepare_plan(tiles, physical, country, include_physical=True)
+    else:
+        statuses, rows = prepare_plan(tiles, physical, country)
     blocked = [{"zxy": list(row["tile"]), "land_pixels": row["land_pixels"]}
                for row in rows
                if row["status"] == "mixed_coastal_OSM_Colombia_land_and_offland"]

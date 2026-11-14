@@ -1,0 +1,80 @@
+name: Island Additional COG Seam and Eight Minor Islet DEM QA
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/island-source-readiness.yml'
+      - 'scripts/island_source_readiness.py'
+      - 'tests/test_island_source_readiness.py'
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install DEM and cartographic reference dependencies
+        run: python -m pip install -r requirements-terrain.txt -r requirements-island-inventory.txt
+      - name: Verify offline regression suite and no-invented-height safeguards
+        run: python -m unittest discover -s tests -v
+      - name: Rebuild original 137 COG selected inventory
+        run: |
+          python scripts/inventory.py --output output --workers 8
+          python scripts/extend_inventory.py --inventory output --islands data/colombia-island-probes.json
+          python - <<'PY'
+          import csv
+          with open('output/colombia_dem_manifest_extended.csv',newline='') as f:
+              r=list(csv.DictReader(f))
+          assert len(r)==137 and all(s['status']=='ok' for s in r)
+          names={s['name'] for s in r}
+          assert 'Copernicus_DSM_COG_10_N03_00_W082_00_DEM' not in names
+          assert 'Copernicus_DSM_COG_10_N03_00_W079_00_DEM' not in names
+          print('Reconfirmed frozen original 137-source inventory')
+          PY
+      - name: Evaluate actual island source transitions and native 30m DEM on eight minor Natural Earth islands
+        run: |
+          python scripts/island_source_readiness.py \
+            --manifest output/colombia_dem_manifest_extended.csv \
+            --minor data/minor-island-review.json \
+            --output output/island-source-readiness/island-source-readiness.json
+      - name: Fail-closed QA of two staged sources, exact source transitions and eight islets
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          s=json.loads(Path('output/island-source-readiness/island-source-readiness.json').read_text())
+          assert s['original_selected_COG_count']==137
+          assert set(s['island_seam_native_COG_summary'])=={'malpelo','gorgona'}
+          assert len(s['eight_minor_island_source_checks'])==8
+          assert s['eight_minor_islands_only_provisional_Natural_Earth_geography']
+          assert s['extra_COGs_approved_or_added']==0
+          assert s['national_publication_allowed'] is False
+          assert s['original_native_height_samples_preserved']
+          assert s['artificial_height_or_ocean_fill_pixels']==0
+          assert s['quitasueno_excluded']
+          for region,row in s['island_seam_native_COG_summary'].items():
+              assert row['checked_tiles']>=20
+              assert row['recovered_genuine_native_pixels']>0
+              assert row['max_original_height_delta_m']<=.001
+              assert row['original_137_manifest_modified'] is False
+          assert all(x['expected_original_selected_COG'] for x in s['eight_minor_island_source_checks'])
+          assert len({x['id'] for x in s['eight_minor_island_source_checks']})==8
+          print('Island staging seam counts:',s['island_seam_native_COG_summary'])
+          print('Eight minor island sample statuses:',{x['id']:x['native_probe']['status'] for x in s['eight_minor_island_source_checks']})
+          print('NO source promoted. NO ocean heights fabricated. NO publication.')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: colombia-island-extra-cog-seams-and-eight-minor-island-evidence
+          path: output/island-source-readiness/island-source-readiness.json
+          retention-days: 1
+          if-no-files-found: warn

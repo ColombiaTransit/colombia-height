@@ -44,8 +44,10 @@ class OnlyNewTumaco140GeoTests(unittest.TestCase):
         self.assertFalse(item["actual_pixel_country_membership_verified"])
 
     def test_build_without_both_expected_ADM0_refs_fails_closed(self):
-        with self.assertRaisesRegex(RuntimeError,"Both independent"):
-            build({}, {}, {"COL":box(*self.b)}, {}, {"ECU":"offline"})
+        from unittest.mock import patch
+        with patch("triage_only_new_tumaco140_geography.select_only_new_140_missing",return_value=[]):
+            with self.assertRaisesRegex(RuntimeError,"Both independent"):
+                build({}, {}, {"COL":box(*self.b)}, {}, {"ECU":"offline"})
 
 
 if __name__=="__main__":

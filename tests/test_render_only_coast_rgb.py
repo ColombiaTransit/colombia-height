@@ -71,7 +71,7 @@ class RenderOnlyCoastTests(unittest.TestCase):
     def test_refuse_zero_land_and_bad_mask_or_overflow(self):
         with self.assertRaisesRegex(ValueError, "zero-only sea"):
             encode_coast_render_only(
-                self.height, np.zeros_like(self.land), self.physical)
+                self.height, np.zeros_like(self.land), np.zeros_like(self.physical))
         with self.assertRaises(TypeError):
             encode_coast_render_only(self.height, self.land.astype("int8"), self.physical)
         with self.assertRaisesRegex(ValueError, "range"):
@@ -81,7 +81,7 @@ class RenderOnlyCoastTests(unittest.TestCase):
 
     def test_original_writer_new_opt_in_mode_writes_mask_in_same_sqlite(self):
         tile = mercantile.tile(-75.55, 10.4, 12)
-        rows=[{"tile":tile,"status":"mixed_coastal_OSM_Colombia_land_and_offland",
+        rows=[{"tile":(tile.z,tile.x,tile.y),"status":"mixed_coastal_OSM_Colombia_land_and_offland",
                "land_pixels":int(self.land.sum()),
                "mask":self.land, "physical_mask":self.physical}]
         fake_source = [{"longitude":"-76","latitude":"10","status":"ok"}]

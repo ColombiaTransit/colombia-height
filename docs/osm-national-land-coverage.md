@@ -34,7 +34,7 @@ performs:
 3. Pilot the 36 zoom-11 tiles around Tumaco, San Andrés, Providencia
    and Malpelo, comparing exact 256×256 original Copernicus native
    missing-height pixels to OSM land, Natural Earth, geoBoundaries,
-   and **direct IGAC departmental polygon geometry**.
+   and *optional* direct IGAC departmental polygon geometry. If the official IGAC server fails, the OSM analysis continues, **IGAC-dependent counts are recorded as null (unavailable), never zero**, and no resulting source can be classified as proven IGAC land.
 4. Re-evaluate **all 1,917** incomplete original zoom-13 tiles and
    independently count the original **1,004** Natural Earth land-gap
    subset; fail if original missing-height counts drift.
@@ -70,3 +70,14 @@ performs:
 Final terrain generation must still separately address coastline policy,
 real native height recovery, tile completeness, geographic source scope
 and seam validation. This study does not produce Terrain-RGB or MBTiles.
+
+## Initial CI finding and service outage
+
+The first successful global OSM download and Colombia bbox clip produced
+**4,184 polygon fragments**. Pilot-centre OSM probe points included
+Bogotá, San Andrés, Providencia and Malpelo; the approximate Tumaco sample
+point was outside OSM mapped land, which is not itself a claim about
+Tumaco's built-up area or coast. The pilot then encountered a transient
+**HTTP 503** from the official IGAC REST service. The audit now treats
+that external reference as optional and preserves unknown IGAC measurements
+as **null**, without inferring no land or stopping OSM-only results.

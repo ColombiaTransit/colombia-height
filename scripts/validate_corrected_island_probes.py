@@ -57,6 +57,7 @@ def parse_osm_coastline_xml(xml_bytes, study_bbox):
                 for t in way.findall("tag")}
         if tags.get("natural") != "coastline":
             continue
+        coastline_ids.append(way.attrib["id"])
         refs = [nd.attrib["ref"] for nd in way.findall("nd")]
         if len(refs) < 4 or any(ref not in nodes for ref in refs):
             # This way is incomplete, so it cannot be converted to land.
@@ -65,7 +66,6 @@ def parse_osm_coastline_xml(xml_bytes, study_bbox):
         if len(set(coords)) < 3:
             continue
         lines.append(LineString(coords))
-        coastline_ids.append(way.attrib["id"])
     if not lines:
         return [], coastline_ids
     candidates = polygonize(unary_union(lines))

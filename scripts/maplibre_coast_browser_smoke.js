@@ -26,8 +26,13 @@ const out = process.env.MAPLIBRE_SMOKE_DIR || "output/maplibre-preview";
   });
   try {
     await page.goto("http://127.0.0.1:8765/", { waitUntil: "load", timeout: 30000 });
-    await page.waitForFunction(() => window.__map && window.__map.getTerrain && window.__map.getTerrain(), { timeout: 45000 });
-    await page.waitForFunction(() => window.__terrainReady, { timeout: 45000 });
+    console.log("Browser first load state:", JSON.stringify(await page.evaluate(() => ({
+      maplibreVersion: window.maplibregl?.version || null,
+      hasMap: !!window.__map,
+      errors: window.__mapErrors || [],
+    }))));
+    await page.waitForFunction(() => window.__map && window.__map.getTerrain && window.__map.getTerrain(), null, { timeout: 25000 });
+    await page.waitForFunction(() => window.__terrainReady, null, { timeout: 25000 });
     await page.waitForTimeout(1800);
     await page.screenshot({ path: out + "/cartagena-maplibre-real-terrain.png", fullPage: true });
     const data = await page.evaluate(() => ({
@@ -53,6 +58,22 @@ const out = process.env.MAPLIBRE_SMOKE_DIR || "output/maplibre-preview";
       throw new Error("MapLibre queryTerrainElevation failed for center point");
     }
     console.log("SUCCESS: genuine MapLibre GL terrain loaded, screenshot and data saved");
+  } catch (err) {
+    const debug = await page.evaluate(() => ({
+      maplibreVersion: window.maplibregl?.version || null,
+      hasMap: !!window.__map,
+      sourceReady: !!window.__terrainReady,
+      styleLoaded: window.__map?.isStyleLoaded?.() || false,
+      terrain: window.__map?.getTerrain?.() || null,
+      errors: window.__mapErrors || [],
+      status: document.getElementById("status")?.textContent,
+    })).catch(e => ({ browserException: String(e) }));
+    console.error("MapLibre debug state:", JSON.stringify(debug));
+    console.error("Uncaught browser JS errors:", JSON.stringify(problems));
+    fs.writeFileSync(out + "/browser-smoke-debug.json",
+      JSON.stringify({debug, problems, error: String(err)}, null, 2) + "\n");
+    await page.screenshot({path:out+"/maplibre-debug-screenshot.png",fullPage:true}).catch(()=>{});
+    throw err;
   } finally {
     await browser.close();
   }

@@ -105,8 +105,21 @@ class ConsolidatedTerrainTests(unittest.TestCase):
         self.assertEqual(len(seen), plan["candidate_tiles"])
         with self.assertRaises(FileExistsError):
             self.make_plan()
+        low = create_plan(self.manifest, self.root / "lowzoom",
+                          minzoom=0, maxzoom=13, shards=4, chunk_tiles=250)
+        self.assertEqual(low["zoom_range"], [0, 13])
+        self.assertEqual(low["candidate_tiles_by_zoom"]["0"], 1)
+        self.assertGreater(low["candidate_tiles_by_zoom"]["13"], 0)
+        self.assertGreater(low["candidate_tiles"], plan["candidate_tiles"])
+        low_0 = [
+            tile for info in low["chunks"]
+            for tile in load_chunk(self.root / "lowzoom", info["id"])[2]
+            if tile[0] == 0
+        ]
+        self.assertEqual(low_0, [(0, 0, 0)])
+        self.assertTrue(any(info["shard"] == 0 for info in low["chunks"]))
         with self.assertRaises(ValueError):
-            create_plan(self.manifest, self.root / "lowzoom", minzoom=0)
+            create_plan(self.manifest, self.root / "invalidzoom", minzoom=0, maxzoom=14)
 
     def test_manifest_and_chunk_integrity_hard_gates(self):
         plan = self.make_plan()

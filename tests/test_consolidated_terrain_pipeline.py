@@ -201,5 +201,106 @@ class ConsolidatedTerrainTests(unittest.TestCase):
             merge_verified_chunks(self.plan_dir,self.results,self.root / "merged.mbtiles")
 
 
+    def test_opt_in_real_writer_terrain_mask_and_atomic_merged_masks(self):
+        """Real in-process native writer, synthetic COG fixture, no network."""
+        from render_only_coast_rgb import COAST_MODE, decode_mask_png, decode_terrain_rgb
+        from consolidated_terrain_pipeline import sha256_file
+        plan=self.make_plan()
+        land=np.zeros((256,256),bool)
+        land[:,:128]=True
+        heights=np.full((256,256),-9999,dtype=np.float32)
+        heights[land]=45.4
+        heights[15,25]=0.0
+        def classify(tiles,osm,country,include_physical=False):
+            self.assertTrue(include_physical)
+            return ({"mixed_coastal_OSM_Colombia_land_and_offland":len(tiles)},
+                    [{"tile":t,"mask":land,"physical_mask":land.copy(),
+                      "land_pixels":int(land.sum()),
+                      "status":"mixed_coastal_OSM_Colombia_land_and_offland"} for t in tiles])
+        m1,m2=self.geometry_mocks()
+        with m1,m2,patch("consolidated_terrain_pipeline.prepare_plan",
+                          side_effect=classify),patch(
+                              "generate_osm_land_only_terrain.intersecting_source_indices",
+                              return_value=[0]),patch(
+                              "generate_osm_land_only_terrain.local_cogs",
+                              return_value=["cached-original"]),patch(
+                              "generate_osm_land_only_terrain.warp_sources",
+                              return_value=(heights,np.ones_like(heights,dtype=np.uint8),0,0)):
+            for chunk in plan["chunks"]:
+                report=render_chunk(
+                    self.plan_dir,chunk["id"],self.manifest,
+                    self.root/"unused-osm-clip",self.root/"unused-land-meta",
+                    self.root/"unused-country",self.results,self.cached,
+                    coast_render_surface=True)
+                self.assertEqual(report["status"],"SUCCESS_render_only_coast")
+                self.assertEqual(report["coast_render_mode"],COAST_MODE)
+                self.assertEqual(report["mixed_coast_tiles_written"],chunk["tiles"])
+                self.assertEqual(report["full_land_tiles_written"],0)
+        out=self.root/"combined-coast.mbtiles"
+        merged=merge_verified_chunks(self.plan_dir,self.results,out)
+        self.assertEqual(merged["status"],"MERGED_RENDER_ONLY_NOT_NATIONAL_RELEASE")
+        self.assertEqual(merged["tiles"],plan["candidate_tiles"])
+        self.assertFalse(merged["national_release_authorized"])
+        with sqlite3.connect(out) as db:
+            self.assertEqual(db.execute("PRAGMA integrity_check").fetchone()[0],"ok")
+            meta=dict(db.execute("SELECT name,value FROM metadata"))
+            self.assertEqual(meta["coast_render_mode"],COAST_MODE)
+            self.assertEqual(meta["sea_surface_is_bathymetry"],"false")
+            count=db.execute("SELECT count(*) FROM osm_land_mask").fetchone()[0]
+            self.assertEqual(count,plan["candidate_tiles"])
+            t=db.execute("""SELECT t.tile_data,m.mask_png FROM tiles t
+                            JOIN osm_land_mask m USING(zoom_level,tile_column,tile_row)
+                            LIMIT 1""").fetchone()
+            np.testing.assert_array_equal(decode_mask_png(t[1]),land)
+            decoded=decode_terrain_rgb(t[0])
+            np.testing.assert_allclose(decoded[land],heights[land],atol=0.051)
+            self.assertTrue((decoded[~land]==0).all())
+
+    def test_bad_mask_file_cannot_leave_publishable_merged_mbtiles(self):
+        from consolidated_terrain_pipeline import sha256_file
+        plan=self.make_plan()
+        png=io.BytesIO()
+        Image.fromarray(np.full((256,256,3),127,dtype=np.uint8)).save(png,format="PNG")
+        mask_png=io.BytesIO()
+        Image.fromarray(np.full((256,256),255,dtype=np.uint8),mode="L").save(mask_png,format="PNG")
+        self.results.mkdir()
+        for index,chunk in enumerate(plan["chunks"]):
+            path=self.results/f"chunk-{chunk['id']}.mbtiles"
+            with sqlite3.connect(path) as db:
+                db.execute("CREATE TABLE metadata(name TEXT PRIMARY KEY, value TEXT)")
+                db.execute("INSERT INTO metadata VALUES('format','png')")
+                db.execute("INSERT INTO metadata VALUES('coast_render_mode',?)",
+                           ("surface_zero_visual_only_osm_landmask_v1",))
+                db.execute("""CREATE TABLE tiles(
+                    zoom_level INTEGER,tile_column INTEGER,tile_row INTEGER,tile_data BLOB,
+                    PRIMARY KEY(zoom_level,tile_column,tile_row))""")
+                db.execute("""CREATE TABLE osm_land_mask(
+                    zoom_level INTEGER,tile_column INTEGER,tile_row INTEGER,mask_png BLOB,
+                    PRIMARY KEY(zoom_level,tile_column,tile_row))""")
+                for line in (self.plan_dir/chunk["filename"]).read_text().splitlines():
+                    tile=json.loads(line)
+                    z,x,y=tile["z"],tile["x"],tile["tms_y"]
+                    db.execute("INSERT INTO tiles VALUES(?,?,?,?)",(z,x,y,png.getvalue()))
+                    db.execute("INSERT INTO osm_land_mask VALUES(?,?,?,?)",
+                               (z,x,y,b"NOT_PNG" if index==0 else mask_png.getvalue()))
+            report={
+                "schema":"colombia-osm-land-only-chunk-v1",
+                "chunk_id":chunk["id"],"chunk_sha256":chunk["sha256"],
+                "source_manifest_sha256":plan["source_manifest_sha256"],
+                "national_release_authorized":False,"blocked_coastal_tiles":[],
+                "status":"SUCCESS_render_only_coast",
+                "coast_render_mode":"surface_zero_visual_only_osm_landmask_v1",
+                "full_land_tiles_written":0,
+                "mixed_coast_tiles_written":chunk["tiles"],
+                "skipped_all_offland":0,
+                "mbtiles_file":path.name,"mbtiles_sha256":sha256_file(path)}
+            (self.results/f"chunk-{chunk['id']}.report.json").write_text(json.dumps(report))
+        out=self.root/"must-not-exist.mbtiles"
+        with self.assertRaises((AssertionError,ValueError,OSError,Exception)):
+            merge_verified_chunks(self.plan_dir,self.results,out)
+        self.assertFalse(out.exists())
+        self.assertFalse(out.with_name(out.name+".incomplete").exists())
+
+
 if __name__ == "__main__":
     unittest.main()

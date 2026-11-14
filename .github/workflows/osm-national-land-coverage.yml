@@ -51,7 +51,14 @@ jobs:
           df -h .
           python scripts/osm_land_reference.py --output output/osm-reference
           df -h .
-      - name: Four-site 36-tile pilot at native z11 with official IGAC polygon cross-check
+      - name: Preserve source hash and ODbL attribution even if the audit later fails
+        uses: actions/upload-artifact@v4
+        with:
+          name: colombia-osm-clip-source-provenance
+          path: output/osm-reference/osm-land-study-metadata.json
+          retention-days: 1
+          if-no-files-found: error
+      - name: Four-site 36-tile pilot at native z11 (official IGAC comparison optional)
         run: |
           python scripts/osm_national_land_audit.py \
             --manifest output/colombia_dem_manifest_extended.csv \
@@ -82,6 +89,8 @@ jobs:
           assert full["source_candidate_total"]==52
           assert len(full["all_52_omitted_public_cog_candidates"])==52
           assert full["selected_source_cogs"]==137
+          assert full["official_IGAC_context_mask_status"] in ("evaluated", "unavailable_NULL_not_zero")
+          assert pilot["official_IGAC_context_mask_status"] in ("evaluated", "unavailable_NULL_not_zero")
           assert metadata["national_publication_allowed"] is False
           assert not pilot["national_publication_allowed"]
           assert not full["national_publication_allowed"]

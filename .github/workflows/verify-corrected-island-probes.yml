@@ -1,0 +1,71 @@
+name: Validate Corrected Santa Catalina and Gorgonilla OSM Island Probes
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/verify-corrected-island-probes.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect-corrected-points:
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install existing native Copernicus and OSM research dependencies
+        run: python -m pip install -r requirements-terrain.txt -r requirements-island-inventory.txt
+      - name: Run all offline tests including coastline ring closure tests
+        run: python -m unittest discover -s tests -v
+      - name: Rebuild frozen original 137-source DEM manifest
+        run: |
+          python scripts/inventory.py --output output --workers 8
+          python scripts/extend_inventory.py --inventory output --islands data/colombia-island-probes.json
+          python - <<'PY'
+          import csv
+          with open('output/colombia_dem_manifest_extended.csv', newline='') as f:
+              rows=list(csv.DictReader(f))
+          assert len(rows)==137 and all(r['status']=='ok' for r in rows)
+          print('Original Copernicus inventory: 137')
+          PY
+      - name: Request only the two small OSM island map windows, validate real coastline rings, and audit original DEM validity
+        run: |
+          python scripts/validate_corrected_island_probes.py \
+            --manifest output/colombia_dem_manifest_extended.csv \
+            --candidate-probes data/island-probe-candidate-corrections-2026-11-14.json \
+            --output output/updated-island-probes/updated-island-probe-validation.json
+      - name: Confirm incomplete OSM map data is never treated as missing land or zero-height ocean
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('output/updated-island-probes/updated-island-probe-validation.json').read_text())
+          assert r['original_selected_COG_count']==137
+          assert set(r['islands'])=={'santa_catalina','gorgonilla'}
+          assert r['unknown_OSM_land_not_water'] is True
+          assert r['OSM_coastlines_not_legal_colombia_jurisdiction'] is True
+          assert r['quitasueno_excluded'] is True
+          assert r['no_COGs_approved_or_added'] is True
+          assert r['no_heights_fabricated'] is True
+          assert r['national_publication_allowed'] is False
+          assert all(x['land_polygon_approval'] is False for x in r['islands'].values())
+          for name,x in r['islands'].items():
+              v=x['native_DEM_coverage_on_provisional_polygon']
+              if v is not None:
+                  assert v['native_source_only_no_synthetic_elevations'] is True
+                  assert v['OSM_land_pixel_centers']==v['original_valid_native_pixels']+v['original_137_COG_native_NoData_island_pixels']
+              print(name, x['status'], 'original DEM coverage:', v)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: colombia-santa-catalina-gorgonilla-corrected-probe-osm-native-evidence
+          path: output/updated-island-probes/updated-island-probe-validation.json
+          retention-days: 1
+          if-no-files-found: error

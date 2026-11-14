@@ -50,7 +50,7 @@ class NationalStaged139Tests(unittest.TestCase):
                         "data/staged-island-source-selection-2026-11-14.json").read_text())
         self.assertEqual(len(validate_stage_selection(original,original+extra,decision)),2)
         with self.assertRaisesRegex(AssertionError,"priorities"):
-            validate_stage_selection(extra+original,original+extra,decision)
+            validate_stage_selection(original,original[1:]+original[:1]+extra,decision)
 
     def test_new_added_extent_may_include_other_countries_and_sea(self):
         target={"longitude":"-82","latitude":"3"}

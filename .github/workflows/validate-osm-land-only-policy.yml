@@ -1,0 +1,48 @@
+name: Validate OSM-Only Colombian Land DEM Contract — No Ocean/Source Downloads
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/validate-osm-land-only-policy.yml'
+      - 'scripts/osm_land_only_dem_policy.py'
+      - 'tests/test_osm_land_only_dem_policy.py'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: python -m pip install numpy
+      - name: Land-only source guarantee — never manufacture ocean or use ADM0 as land
+        run: python -m unittest discover -s tests -p 'test_osm_land_only_dem_policy.py' -v
+      - name: Never call RGB mixed coast/source publish without verified NoData handling
+        run: |
+          python - <<'PY'
+          import sys,numpy as np
+          sys.path.insert(0,"scripts")
+          from osm_land_only_dem_policy import verify_osm_land_only_native_dem,require_renderer_for_mixed_coast_tile
+          m=np.zeros((256,256),bool)
+          c=np.zeros((256,256),bool)
+          v=np.full((256,256),-9999.,dtype=np.float32)
+          r,_=verify_osm_land_only_native_dem(v,m,c)
+          assert not r['emit_entirely_ocean_tile']
+          assert r['marine_bathymetry_study_required'] is False
+          m[0,0]=c[0,0]=True
+          v[0,0]=37
+          r,_=verify_osm_land_only_native_dem(v,m,c)
+          try:
+              require_renderer_for_mixed_coast_tile(r,False)
+              raise AssertionError('Unverified alpha semantics must fail')
+          except RuntimeError:
+              pass
+          print('Verified OSM land-only native DEM QA and sea/out-of-scope exclusion; no raster build')
+          PY

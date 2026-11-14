@@ -1,0 +1,54 @@
+name: Discover Public DIMAR ArcGIS Hub Datasets
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/dimar-hub-discovery.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  search:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install existing research dependencies
+        run: python -m pip install -r requirements-terrain.txt -r requirements-island-inventory.txt
+      - name: Run regression suite including attribution and offshore safeguards
+        run: python -m unittest discover -s tests -v
+      - name: Search ArcGIS Hub and Online for coast and island datasets
+        run: python scripts/dimar_hub_discovery.py --output output/dimar-hub/dimar-hub-search.json
+      - name: Verify publisher identity is not guessed and no sources promoted
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path("output/dimar-hub/dimar-hub-search.json")
+          r=json.loads(p.read_text())
+          assert r["source_cog_candidates_unmodified"]==52
+          assert r["selected_original_source_cogs_still"]==137
+          assert r["coastline_polygon_accepted"] is False
+          assert r["national_publication_allowed"] is False
+          assert all(i["land_mask_status"]=="NOT_VERIFIED_NO_GEOMETRY"
+                     for i in r["coastal_or_island_search_items"])
+          if not r["arcgis_item_org_verified_by_exact_hub_match"]:
+              assert all(i["provenance"]=="ARCGIS_SEARCH_ONLY_PUBLISHER_UNVERIFIED"
+                         for i in r["coastal_or_island_search_items"])
+          print("Search items",r["items_total"])
+          print("Verified Hub organization",r["arcgis_item_org_verified_by_exact_hub_match"])
+          print("No official land/sea mask or DEM source promotion")
+          PY
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: colombia-dimar-hub-discovery
+          path: output/dimar-hub/dimar-hub-search.json
+          retention-days: 1
+          if-no-files-found: error

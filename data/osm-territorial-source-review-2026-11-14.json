@@ -1,0 +1,611 @@
+{
+  "schema_version": 1,
+  "study_date": "2026-11-14",
+  "source_repository": "ColombiaTransit/colombia-height",
+  "evidence_runs": {
+    "osm_native_z13_pixel_audit": 43573144549,
+    "territorial_52_cog_triage": 43588621857,
+    "tumaco_malpelo_exact_native_z13_recovery": 43497684367
+  },
+  "selected_native_cogs_original": 137,
+  "unselected_cog_candidates": 52,
+  "original_incomplete_z13_tiles": 1917,
+  "osm_reference_land_missing_z13_tiles": 1008,
+  "reconciled_tier_counts": {
+    "1_OSM_IGAC_native_recovery_measured_mainland": 1,
+    "2_known_Malpelo_study_native_recovery_measured_island_review": 1,
+    "4_named_island_study_vicinity_NOT_territory_certification": 1,
+    "5_foreign_ADM0_dominant_cell_REFERENCE_only": 30,
+    "6_cross_border_foreign_ADM0_overlap_REVIEW": 9,
+    "8_no_matching_OSM_land_missing_pixels_no_conclusion": 10
+  },
+  "source_cog_evidence": [
+    {
+      "cog": "Copernicus_DSM_COG_10_N01_00_W080_00_DEM",
+      "review_tier": "1_OSM_IGAC_native_recovery_measured_mainland",
+      "missing_osm_land_pixels_inside_cog_degree_cell": 130336,
+      "missing_osm_and_igac_pixels_inside_degree_cell": 5865,
+      "prior_native_z13_recovered_pixels": 460333,
+      "foreign_adm0_cell_overlaps_context_only": [
+        "ECU"
+      ],
+      "automatically_approved": false
+    },
+    {
+      "cog": "Copernicus_DSM_COG_10_N03_00_W082_00_DEM",
+      "review_tier": "2_known_Malpelo_study_native_recovery_measured_island_review",
+      "missing_osm_land_pixels_inside_cog_degree_cell": 354,
+      "missing_osm_and_igac_pixels_inside_degree_cell": 0,
+      "prior_native_z13_recovered_pixels": 145625,
+      "foreign_adm0_cell_overlaps_context_only": [],
+      "automatically_approved": false
+    },
+    {
+      "cog": "Copernicus_DSM_COG_10_N03_00_W079_00_DEM",
+      "review_tier": "4_named_island_study_vicinity_NOT_territory_certification",
+      "missing_osm_land_pixels_inside_cog_degree_cell": 747,
+      "missing_osm_and_igac_pixels_inside_degree_cell": 0,
+      "prior_native_z13_recovered_pixels": null,
+      "foreign_adm0_cell_overlaps_context_only": [],
+      "automatically_approved": false
+    },
+    {
+      "cog": "Copernicus_DSM_COG_10_N07_00_W070_00_DEM",
+      "review_tier": "5_foreign_ADM0_dominant_cell_REFERENCE_only",
+      "missing_osm_land_pixels_inside_cog_degree_cell": 1781742,
+      "missing_osm_and_igac_pixels_inside_degree_cell": 0,
+      "prior_native_z13_recovered_pixels": null,
+      "foreign_adm0_cell_overlaps_context_only": [
+        "VEN"
+      ],
+      "automatically_approved": false
+    },
+    {
+      "cog": "Copernicus_DSM_COG_10_N02_00_W067_00_DEM",
+      "review_tier": "5_foreign_ADM0_dominant_cell_REFERENCE_only",
+      "missing_osm_land_pixels_inside_cog_degree_cell": 1618223,
+      "missing_osm_and_igac_pixels_inside_degree_cell": 0,
+      "prior_native_z13_recovered_pixels": null,
+      "foreign_adm0_cell_overlaps_context_only": [
+        "VEN"
+      ],
+      "automatically_approved": false
+    },
+    {
+      "cog": "Copernicus_DSM_COG_10_S04_00_W072_00_DEM",
+      "review_tier": "5_foreign_ADM0_dominant_cell_REFERENCE_only",
+      "missing_osm_land_pixels_inside_cog_degree_cell": 1557450,
+      "missing_osm_and_igac_pixels_inside_degree_cell": 0,
+      "prior_native_z13_recovered_pixels": null,
+      "foreign_adm0_cell_overlaps_context_only": [
+        "PER"
+      ],
+      "automatically_approved": false
+    },
+    {
+      "cog": "Copernicus_DSM_COG_10_N00_00_W069_00_DEM",
+      "review_tier": "5_foreign_ADM0_dominant_cell_REFERENCE_only",
+      "missing_osm_land_pixels_inside_cog_degree_cell": 1321538,
+      "missing_osm_and_igac_pixels_inside_degree_cell": 0,
+      "prior_native_z13_recovered_pixels": null,
+      "foreign_adm0_cell_overlaps_context_only": [
+        "BRA"
+      ],
+      "automatically_approved": false
+    },
+    {
+      "cog": "Copernicus_DSM_COG_10_N00_00_W068_00_DEM",
+      "review_tier": "5_foreign_ADM0_dominant_cell_REFERENCE_only",
+      "missing_osm_land_pixels_inside_cog_degree_cell": 1130244,
+      "missing_osm_and_igac_pixels_inside_degree_cell": 0,
+      "prior_native_z13_recovered_pixels": null,
+      "foreign_adm0_cell_overlaps_context_only": [
+        "BRA"
+      ],
+      "automatically_approved": false
+    },
+    {
+      "cog": "Copernicus_DSM_COG_10_N00_00_W067_00_DEM",
+      "review_tier": "5_foreign_ADM0_dominant_cell_REFERENCE_only",
+      "missing_osm_land_pixels_inside_cog_degree_cell": 1130050,
+      "missing_osm_and_igac_pixels_inside_degree_cell": 0,
+      "prior_native_z13_recovered_pixels": null,
+      "foreign_adm0_cell_overlaps_context_only": [
+        "BRA",
+        "VEN"
+      ],
+      "automatically_approved": false
+    },
+    {
+      "cog": "Copernicus_DSM_COG_10_N08_00_W072_00_DEM",
+      "review_tier": "5_foreign_ADM0_dominant_cell_REFERENCE_only",
+      "missing_osm_land_pixels_inside_cog_degree_cell": 1127296,
+      "missing_osm_and_igac_pixels_inside_degree_cell": 0,
+      "prior_native_z13_recovered_pixels": null,
+      "foreign_adm0_cell_overlaps_context_only": [
+        "VEN"
+      ],
+      "automatically_approved": false
+    },
+    {
+      "cog": "Copernicus_DSM_COG_10_S04_00_W073_00_DEM",
+      "review_tier": "5_foreign_ADM0_dominant_cell_REFERENCE_only",
+      "missing_osm_land_pixels_inside_cog_degree_cell": 1048680,
+      "missing_osm_and_igac_pixels_inside_degree_cell": 0,
+      "prior_native_z13_recovered_pixels": null,
+      "foreign_adm0_cell_overlaps_context_only": [
+        "PER"
+      ],
+      "automatically_approved": false
+    },
+    {
+      "cog": "Copernicus_DSM_COG_10_S04_00_W074_00_DEM",
+      "review_tier": "5_foreign_ADM0_dominant_cell_REFERENCE_only",
+      "missing_osm_land_pixels_inside_cog_degree_cell": 1048500,
+      "missing_osm_and_igac_pixels_inside_degree_cell": 0,
+      "prior_native_z13_recovered_pixels": null,
+      "foreign_adm0_cell_overlaps_context_only": [
+        "PER"
+      ],
+      "automatically_approved": false
+    },
+    {
+      "cog": "Copernicus_DSM_COG_10_N06_00_W067_00_DEM",
+      "review_tier": "5_foreign_ADM0_dominant_cell_REFERENCE_only",
+      "missing_osm_land_pixels_inside_cog_degree_cell": 932217,
+      "missing_osm_and_igac_pixels_inside_degree_cell": 0,
+      "prior_native_z13_recovered_pixels": null,
+      "foreign_adm0_cell_overlaps_context_only": [
+        "VEN"
+      ],
+      "automatically_approved": false
+    },
+    {
+      "cog": "Copernicus_DSM_COG_10_N05_00_W067_00_DEM",
+      "review_tier": "5_foreign_ADM0_dominant_cell_REFERENCE_only",
+      "missing_osm_land_pixels_inside_cog_degree_cell": 930627,
+      "missing_osm_and_igac_pixels_inside_degree_cell": 0,
+      "prior_native_z13_recovered_pixels": null,
+      "foreign_adm0_cell_overlaps_context_only": [
+        "VEN"
+      ],
+      "automatically_approved": false
+    },
+    {
+      "cog": "Copernicus_DSM_COG_10_N04_00_W067_00_DEM",
+      "review_tier": "5_foreign_ADM0_dominant_cell_REFERENCE_only",
+      "missing_osm_land_pixels_inside_cog_degree_cell": 929037,
+      "missing_osm_and_igac_pixels_inside_degree_cell": 0,
+      "prior_native_z13_recovered_pixels": null,
+      "foreign_adm0_cell_overlaps_context_only": [
+        "VEN"
+      ],
+      "automatically_approved": false
+    },
+    {
+      "cog": "Copernicus_DSM_COG_10_N03_00_W067_00_DEM",
+      "review_tier": "5_foreign_ADM0_dominant_cell_REFERENCE_only",
+      "missing_osm_land_pixels_inside_cog_degree_cell": 928083,
+      "missing_osm_and_igac_pixels_inside_degree_cell": 0,
+      "prior_native_z13_recovered_pixels": null,
+      "foreign_adm0_cell_overlaps_context_only": [
+        "VEN"
+      ],
+      "automatically_approved": false
+    },
+    {
+      "cog": "Copernicus_DSM_COG_10_S01_00_W077_00_DEM",
+      "review_tier": "5_foreign_ADM0_dominant_cell_REFERENCE_only",
+      "missing_osm_land_pixels_inside_cog_degree_cell": 856423,
+      "missing_osm_and_igac_pixels_inside_degree_cell": 0,
+      "prior_native_z13_recovered_pixels": null,
+      "foreign_adm0_cell_overlaps_context_only": [
+        "ECU"
+      ],
+      "automatically_approved": false
+    },
+    {
+      "cog": "Copernicus_DSM_COG_10_S03_00_W075_00_DEM",
+      "review_tier": "5_foreign_ADM0_dominant_cell_REFERENCE_only",
+      "missing_osm_land_pixels_inside_cog_degree_cell": 842052,
+      "missing_osm_and_igac_pixels_inside_degree_cell": 0,
+      "prior_native_z13_recovered_pixels": null,
+      "foreign_adm0_cell_overlaps_context_only": [
+        "PER"
+      ],
+      "automatically_approved": false
+    },
+    {
+      "cog": "Copernicus_DSM_COG_10_N08_00_W071_00_DEM",
+      "review_tier": "5_foreign_ADM0_dominant_cell_REFERENCE_only",
+      "missing_osm_land_pixels_inside_cog_degree_cell": 535900,
+      "missing_osm_and_igac_pixels_inside_degree_cell": 0,
+      "prior_native_z13_recovered_pixels": null,
+      "foreign_adm0_cell_overlaps_context_only": [
+        "VEN"
+      ],
+      "automatically_approved": false
+    },
+    {
+      "cog": "Copernicus_DSM_COG_10_N00_00_W080_00_DEM",
+      "review_tier": "5_foreign_ADM0_dominant_cell_REFERENCE_only",
+      "missing_osm_land_pixels_inside_cog_degree_cell": 460255,
+      "missing_osm_and_igac_pixels_inside_degree_cell": 0,
+      "prior_native_z13_recovered_pixels": null,
+      "foreign_adm0_cell_overlaps_context_only": [
+        "ECU"
+      ],
+      "automatically_approved": false
+    },
+    {
+      "cog": "Copernicus_DSM_COG_10_N07_00_W068_00_DEM",
+      "review_tier": "5_foreign_ADM0_dominant_cell_REFERENCE_only",
+      "missing_osm_land_pixels_inside_cog_degree_cell": 460255,
+      "missing_osm_and_igac_pixels_inside_degree_cell": 0,
+      "prior_native_z13_recovered_pixels": null,
+      "foreign_adm0_cell_overlaps_context_only": [
+        "VEN"
+      ],
+      "automatically_approved": false
+    },
+    {
+      "cog": "Copernicus_DSM_COG_10_N07_00_W069_00_DEM",
+      "review_tier": "5_foreign_ADM0_dominant_cell_REFERENCE_only",
+      "missing_osm_land_pixels_inside_cog_degree_cell": 460175,
+      "missing_osm_and_igac_pixels_inside_degree_cell": 0,
+      "prior_native_z13_recovered_pixels": null,
+      "foreign_adm0_cell_overlaps_context_only": [
+        "VEN"
+      ],
+      "automatically_approved": false
+    },
+    {
+      "cog": "Copernicus_DSM_COG_10_S05_00_W069_00_DEM",
+      "review_tier": "5_foreign_ADM0_dominant_cell_REFERENCE_only",
+      "missing_osm_land_pixels_inside_cog_degree_cell": 198662,
+      "missing_osm_and_igac_pixels_inside_degree_cell": 0,
+      "prior_native_z13_recovered_pixels": null,
+      "foreign_adm0_cell_overlaps_context_only": [
+        "BRA"
+      ],
+      "automatically_approved": false
+    },
+    {
+      "cog": "Copernicus_DSM_COG_10_S04_00_W069_00_DEM",
+      "review_tier": "5_foreign_ADM0_dominant_cell_REFERENCE_only",
+      "missing_osm_land_pixels_inside_cog_degree_cell": 198458,
+      "missing_osm_and_igac_pixels_inside_degree_cell": 0,
+      "prior_native_z13_recovered_pixels": null,
+      "foreign_adm0_cell_overlaps_context_only": [
+        "BRA"
+      ],
+      "automatically_approved": false
+    },
+    {
+      "cog": "Copernicus_DSM_COG_10_S03_00_W069_00_DEM",
+      "review_tier": "5_foreign_ADM0_dominant_cell_REFERENCE_only",
+      "missing_osm_land_pixels_inside_cog_degree_cell": 198254,
+      "missing_osm_and_igac_pixels_inside_degree_cell": 0,
+      "prior_native_z13_recovered_pixels": null,
+      "foreign_adm0_cell_overlaps_context_only": [
+        "BRA"
+      ],
+      "automatically_approved": false
+    },
+    {
+      "cog": "Copernicus_DSM_COG_10_S02_00_W069_00_DEM",
+      "review_tier": "5_foreign_ADM0_dominant_cell_REFERENCE_only",
+      "missing_osm_land_pixels_inside_cog_degree_cell": 198118,
+      "missing_osm_and_igac_pixels_inside_degree_cell": 0,
+      "prior_native_z13_recovered_pixels": null,
+      "foreign_adm0_cell_overlaps_context_only": [
+        "BRA"
+      ],
+      "automatically_approved": false
+    },
+    {
+      "cog": "Copernicus_DSM_COG_10_S01_00_W069_00_DEM",
+      "review_tier": "5_foreign_ADM0_dominant_cell_REFERENCE_only",
+      "missing_osm_land_pixels_inside_cog_degree_cell": 198084,
+      "missing_osm_and_igac_pixels_inside_degree_cell": 0,
+      "prior_native_z13_recovered_pixels": null,
+      "foreign_adm0_cell_overlaps_context_only": [
+        "BRA"
+      ],
+      "automatically_approved": false
+    },
+    {
+      "cog": "Copernicus_DSM_COG_10_N10_00_W071_00_DEM",
+      "review_tier": "5_foreign_ADM0_dominant_cell_REFERENCE_only",
+      "missing_osm_land_pixels_inside_cog_degree_cell": 36465,
+      "missing_osm_and_igac_pixels_inside_degree_cell": 0,
+      "prior_native_z13_recovered_pixels": null,
+      "foreign_adm0_cell_overlaps_context_only": [
+        "VEN"
+      ],
+      "automatically_approved": false
+    },
+    {
+      "cog": "Copernicus_DSM_COG_10_N08_00_W070_00_DEM",
+      "review_tier": "5_foreign_ADM0_dominant_cell_REFERENCE_only",
+      "missing_osm_land_pixels_inside_cog_degree_cell": 20976,
+      "missing_osm_and_igac_pixels_inside_degree_cell": 0,
+      "prior_native_z13_recovered_pixels": null,
+      "foreign_adm0_cell_overlaps_context_only": [
+        "VEN"
+      ],
+      "automatically_approved": false
+    },
+    {
+      "cog": "Copernicus_DSM_COG_10_N07_00_W067_00_DEM",
+      "review_tier": "5_foreign_ADM0_dominant_cell_REFERENCE_only",
+      "missing_osm_land_pixels_inside_cog_degree_cell": 12720,
+      "missing_osm_and_igac_pixels_inside_degree_cell": 0,
+      "prior_native_z13_recovered_pixels": null,
+      "foreign_adm0_cell_overlaps_context_only": [
+        "VEN"
+      ],
+      "automatically_approved": false
+    },
+    {
+      "cog": "Copernicus_DSM_COG_10_S03_00_W076_00_DEM",
+      "review_tier": "5_foreign_ADM0_dominant_cell_REFERENCE_only",
+      "missing_osm_land_pixels_inside_cog_degree_cell": 10455,
+      "missing_osm_and_igac_pixels_inside_degree_cell": 0,
+      "prior_native_z13_recovered_pixels": null,
+      "foreign_adm0_cell_overlaps_context_only": [
+        "PER",
+        "ECU"
+      ],
+      "automatically_approved": false
+    },
+    {
+      "cog": "Copernicus_DSM_COG_10_S02_00_W077_00_DEM",
+      "review_tier": "5_foreign_ADM0_dominant_cell_REFERENCE_only",
+      "missing_osm_land_pixels_inside_cog_degree_cell": 9176,
+      "missing_osm_and_igac_pixels_inside_degree_cell": 0,
+      "prior_native_z13_recovered_pixels": null,
+      "foreign_adm0_cell_overlaps_context_only": [
+        "ECU"
+      ],
+      "automatically_approved": false
+    },
+    {
+      "cog": "Copernicus_DSM_COG_10_S04_00_W075_00_DEM",
+      "review_tier": "5_foreign_ADM0_dominant_cell_REFERENCE_only",
+      "missing_osm_land_pixels_inside_cog_degree_cell": 4140,
+      "missing_osm_and_igac_pixels_inside_degree_cell": 0,
+      "prior_native_z13_recovered_pixels": null,
+      "foreign_adm0_cell_overlaps_context_only": [
+        "PER"
+      ],
+      "automatically_approved": false
+    },
+    {
+      "cog": "Copernicus_DSM_COG_10_N10_00_W072_00_DEM",
+      "review_tier": "6_cross_border_foreign_ADM0_overlap_REVIEW",
+      "missing_osm_land_pixels_inside_cog_degree_cell": 1286876,
+      "missing_osm_and_igac_pixels_inside_degree_cell": 0,
+      "prior_native_z13_recovered_pixels": null,
+      "foreign_adm0_cell_overlaps_context_only": [
+        "VEN"
+      ],
+      "automatically_approved": false
+    },
+    {
+      "cog": "Copernicus_DSM_COG_10_S02_00_W076_00_DEM",
+      "review_tier": "6_cross_border_foreign_ADM0_overlap_REVIEW",
+      "missing_osm_land_pixels_inside_cog_degree_cell": 851175,
+      "missing_osm_and_igac_pixels_inside_degree_cell": 0,
+      "prior_native_z13_recovered_pixels": null,
+      "foreign_adm0_cell_overlaps_context_only": [
+        "PER",
+        "ECU"
+      ],
+      "automatically_approved": false
+    },
+    {
+      "cog": "Copernicus_DSM_COG_10_S05_00_W072_00_DEM",
+      "review_tier": "6_cross_border_foreign_ADM0_overlap_REVIEW",
+      "missing_osm_land_pixels_inside_cog_degree_cell": 525871,
+      "missing_osm_and_igac_pixels_inside_degree_cell": 0,
+      "prior_native_z13_recovered_pixels": null,
+      "foreign_adm0_cell_overlaps_context_only": [
+        "BRA",
+        "PER"
+      ],
+      "automatically_approved": false
+    },
+    {
+      "cog": "Copernicus_DSM_COG_10_N09_00_W072_00_DEM",
+      "review_tier": "6_cross_border_foreign_ADM0_overlap_REVIEW",
+      "missing_osm_land_pixels_inside_cog_degree_cell": 344196,
+      "missing_osm_and_igac_pixels_inside_degree_cell": 0,
+      "prior_native_z13_recovered_pixels": null,
+      "foreign_adm0_cell_overlaps_context_only": [
+        "VEN"
+      ],
+      "automatically_approved": false
+    },
+    {
+      "cog": "Copernicus_DSM_COG_10_N09_00_W078_00_DEM",
+      "review_tier": "6_cross_border_foreign_ADM0_overlap_REVIEW",
+      "missing_osm_land_pixels_inside_cog_degree_cell": 120847,
+      "missing_osm_and_igac_pixels_inside_degree_cell": 0,
+      "prior_native_z13_recovered_pixels": null,
+      "foreign_adm0_cell_overlaps_context_only": [
+        "PAN"
+      ],
+      "automatically_approved": false
+    },
+    {
+      "cog": "Copernicus_DSM_COG_10_N11_00_W071_00_DEM",
+      "review_tier": "6_cross_border_foreign_ADM0_overlap_REVIEW",
+      "missing_osm_land_pixels_inside_cog_degree_cell": 111444,
+      "missing_osm_and_igac_pixels_inside_degree_cell": 0,
+      "prior_native_z13_recovered_pixels": null,
+      "foreign_adm0_cell_overlaps_context_only": [
+        "VEN"
+      ],
+      "automatically_approved": false
+    },
+    {
+      "cog": "Copernicus_DSM_COG_10_N08_00_W079_00_DEM",
+      "review_tier": "6_cross_border_foreign_ADM0_overlap_REVIEW",
+      "missing_osm_land_pixels_inside_cog_degree_cell": 94240,
+      "missing_osm_and_igac_pixels_inside_degree_cell": 0,
+      "prior_native_z13_recovered_pixels": null,
+      "foreign_adm0_cell_overlaps_context_only": [
+        "PAN"
+      ],
+      "automatically_approved": false
+    },
+    {
+      "cog": "Copernicus_DSM_COG_10_N07_00_W079_00_DEM",
+      "review_tier": "6_cross_border_foreign_ADM0_overlap_REVIEW",
+      "missing_osm_land_pixels_inside_cog_degree_cell": 63570,
+      "missing_osm_and_igac_pixels_inside_degree_cell": 0,
+      "prior_native_z13_recovered_pixels": null,
+      "foreign_adm0_cell_overlaps_context_only": [
+        "PAN"
+      ],
+      "automatically_approved": false
+    },
+    {
+      "cog": "Copernicus_DSM_COG_10_N09_00_W079_00_DEM",
+      "review_tier": "6_cross_border_foreign_ADM0_overlap_REVIEW",
+      "missing_osm_land_pixels_inside_cog_degree_cell": 1529,
+      "missing_osm_and_igac_pixels_inside_degree_cell": 0,
+      "prior_native_z13_recovered_pixels": null,
+      "foreign_adm0_cell_overlaps_context_only": [
+        "PAN"
+      ],
+      "automatically_approved": false
+    },
+    {
+      "cog": "Copernicus_DSM_COG_10_N00_00_W066_00_DEM",
+      "review_tier": "8_no_matching_OSM_land_missing_pixels_no_conclusion",
+      "missing_osm_land_pixels_inside_cog_degree_cell": 0,
+      "missing_osm_and_igac_pixels_inside_degree_cell": 0,
+      "prior_native_z13_recovered_pixels": null,
+      "foreign_adm0_cell_overlaps_context_only": [
+        "BRA",
+        "VEN"
+      ],
+      "automatically_approved": false
+    },
+    {
+      "cog": "Copernicus_DSM_COG_10_N01_00_W066_00_DEM",
+      "review_tier": "8_no_matching_OSM_land_missing_pixels_no_conclusion",
+      "missing_osm_land_pixels_inside_cog_degree_cell": 0,
+      "missing_osm_and_igac_pixels_inside_degree_cell": 0,
+      "prior_native_z13_recovered_pixels": null,
+      "foreign_adm0_cell_overlaps_context_only": [
+        "VEN",
+        "BRA"
+      ],
+      "automatically_approved": false
+    },
+    {
+      "cog": "Copernicus_DSM_COG_10_N02_00_W066_00_DEM",
+      "review_tier": "8_no_matching_OSM_land_missing_pixels_no_conclusion",
+      "missing_osm_land_pixels_inside_cog_degree_cell": 0,
+      "missing_osm_and_igac_pixels_inside_degree_cell": 0,
+      "prior_native_z13_recovered_pixels": null,
+      "foreign_adm0_cell_overlaps_context_only": [
+        "VEN"
+      ],
+      "automatically_approved": false
+    },
+    {
+      "cog": "Copernicus_DSM_COG_10_N12_00_W071_00_DEM",
+      "review_tier": "8_no_matching_OSM_land_missing_pixels_no_conclusion",
+      "missing_osm_land_pixels_inside_cog_degree_cell": 0,
+      "missing_osm_and_igac_pixels_inside_degree_cell": 0,
+      "prior_native_z13_recovered_pixels": null,
+      "foreign_adm0_cell_overlaps_context_only": [
+        "VEN"
+      ],
+      "automatically_approved": false
+    },
+    {
+      "cog": "Copernicus_DSM_COG_10_N12_00_W083_00_DEM",
+      "review_tier": "8_no_matching_OSM_land_missing_pixels_no_conclusion",
+      "missing_osm_land_pixels_inside_cog_degree_cell": 0,
+      "missing_osm_and_igac_pixels_inside_degree_cell": 0,
+      "prior_native_z13_recovered_pixels": null,
+      "foreign_adm0_cell_overlaps_context_only": [],
+      "automatically_approved": false
+    },
+    {
+      "cog": "Copernicus_DSM_COG_10_N14_00_W083_00_DEM",
+      "review_tier": "8_no_matching_OSM_land_missing_pixels_no_conclusion",
+      "missing_osm_land_pixels_inside_cog_degree_cell": 0,
+      "missing_osm_and_igac_pixels_inside_degree_cell": 0,
+      "prior_native_z13_recovered_pixels": null,
+      "foreign_adm0_cell_overlaps_context_only": [
+        "NIC"
+      ],
+      "automatically_approved": false
+    },
+    {
+      "cog": "Copernicus_DSM_COG_10_S06_00_W069_00_DEM",
+      "review_tier": "8_no_matching_OSM_land_missing_pixels_no_conclusion",
+      "missing_osm_land_pixels_inside_cog_degree_cell": 0,
+      "missing_osm_and_igac_pixels_inside_degree_cell": 0,
+      "prior_native_z13_recovered_pixels": null,
+      "foreign_adm0_cell_overlaps_context_only": [
+        "BRA"
+      ],
+      "automatically_approved": false
+    },
+    {
+      "cog": "Copernicus_DSM_COG_10_S06_00_W070_00_DEM",
+      "review_tier": "8_no_matching_OSM_land_missing_pixels_no_conclusion",
+      "missing_osm_land_pixels_inside_cog_degree_cell": 0,
+      "missing_osm_and_igac_pixels_inside_degree_cell": 0,
+      "prior_native_z13_recovered_pixels": null,
+      "foreign_adm0_cell_overlaps_context_only": [
+        "BRA"
+      ],
+      "automatically_approved": false
+    },
+    {
+      "cog": "Copernicus_DSM_COG_10_S06_00_W071_00_DEM",
+      "review_tier": "8_no_matching_OSM_land_missing_pixels_no_conclusion",
+      "missing_osm_land_pixels_inside_cog_degree_cell": 0,
+      "missing_osm_and_igac_pixels_inside_degree_cell": 0,
+      "prior_native_z13_recovered_pixels": null,
+      "foreign_adm0_cell_overlaps_context_only": [
+        "BRA"
+      ],
+      "automatically_approved": false
+    },
+    {
+      "cog": "Copernicus_DSM_COG_10_S06_00_W072_00_DEM",
+      "review_tier": "8_no_matching_OSM_land_missing_pixels_no_conclusion",
+      "missing_osm_land_pixels_inside_cog_degree_cell": 0,
+      "missing_osm_and_igac_pixels_inside_degree_cell": 0,
+      "prior_native_z13_recovered_pixels": null,
+      "foreign_adm0_cell_overlaps_context_only": [
+        "BRA"
+      ],
+      "automatically_approved": false
+    }
+  ],
+  "semantics": {
+    "igac_official_department_geometry": "Administrative context, not shoreline certification.",
+    "osm_land": "Physical land reference, not national jurisdiction.",
+    "foreign_geoBoundaries_adm0": "Non-authoritative foreign border *cell overlap*; not exact native DEM pixel nationality.",
+    "named_islands": "Approximate study probe coordinates only; not certified polygon containment.",
+    "native_recovery": "Native GLO-30 pixels verified only for Tumaco N01 W080 and Malpelo N03 W082 as of this register.",
+    "quitasueno": "Explicitly excluded by maintainer.",
+    "unknown_missing_pixels": "Not ocean and must not be filled with synthetic zero or bathymetry."
+  },
+  "next_candidates_for_native_QA": [
+    "Copernicus_DSM_COG_10_N03_00_W079_00_DEM"
+  ],
+  "source_promotion_count": 0,
+  "synthetic_height_pixels": 0,
+  "national_publication_allowed": false
+}

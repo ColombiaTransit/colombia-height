@@ -72,5 +72,142 @@
     "Missing DEM pixels in new source-degree-cell candidate tiles may fall over ocean or outside Colombia; they are UNKNOWN, not missing Colombian terrain.",
     "Zoom 0-13 recovery pixel sums refer to resampled XYZ grids, not independent 30m ground pixels.",
     "Before any national Terrain-RGB build, determine official Colombia land scope, separately evaluate Tumaco N01_W080, and validate strict all-zoom publication gates."
-  ]
+  ],
+  "original_all_zoom_dem_tile_status": {
+    "0": [
+      0,
+      1
+    ],
+    "1": [
+      0,
+      2
+    ],
+    "2": [
+      0,
+      2
+    ],
+    "3": [
+      0,
+      2
+    ],
+    "4": [
+      0,
+      3
+    ],
+    "5": [
+      0,
+      6
+    ],
+    "6": [
+      0,
+      12
+    ],
+    "7": [
+      8,
+      27
+    ],
+    "8": [
+      44,
+      61
+    ],
+    "9": [
+      218,
+      119
+    ],
+    "10": [
+      998,
+      235
+    ],
+    "11": [
+      4226,
+      466
+    ],
+    "12": [
+      17288,
+      925
+    ],
+    "13": [
+      70191,
+      1917
+    ]
+  },
+  "staged_all_zoom_dem_tile_status": {
+    "0": [
+      0,
+      1
+    ],
+    "1": [
+      0,
+      2
+    ],
+    "2": [
+      0,
+      2
+    ],
+    "3": [
+      0,
+      2
+    ],
+    "4": [
+      0,
+      3
+    ],
+    "5": [
+      0,
+      6
+    ],
+    "6": [
+      0,
+      12
+    ],
+    "7": [
+      8,
+      27
+    ],
+    "8": [
+      44,
+      61
+    ],
+    "9": [
+      220,
+      121
+    ],
+    "10": [
+      1013,
+      241
+    ],
+    "11": [
+      4281,
+      476
+    ],
+    "12": [
+      17519,
+      947
+    ],
+    "13": [
+      71203,
+      1963
+    ]
+  },
+  "zoom_tile_status_tuple_order": [
+    "fully_covered_tiles",
+    "partially_covered_tiles"
+  ],
+  "staged_missing_native_zxy_samples_by_zoom": {
+    "0": 65469,
+    "1": 130784,
+    "2": 129944,
+    "3": 126594,
+    "4": 178489,
+    "5": 320717,
+    "6": 496892,
+    "7": 1135330,
+    "8": 2248280,
+    "9": 3812489,
+    "10": 8046876,
+    "11": 15223928,
+    "12": 24020685,
+    "13": 50443636
+  },
+  "all_zoom_measurement_note": "Pixel counts at different XYZ zooms are different resampling grids; do not sum as unique original ground pixels."
 }

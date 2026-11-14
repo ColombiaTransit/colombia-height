@@ -105,8 +105,15 @@ def read_original_national_shards(root):
         if shard_totals[shard]!=stat["tiles_checked"]:
             raise AssertionError("Source coverage shard item count mismatch")
         totals+=stat["tiles_checked"]
-    if totals!=EXPECTED_BASE_CANDIDATES or len(shard_totals)!=32:
+    if totals!=EXPECTED_BASE_CANDIDATES:
         raise AssertionError("Original national shard reconciliation failed")
+    # Valid source-driven geographical shards may be EMPTY. The 32 required
+    # files and summaries still exist; do not mistake zero data rows for a
+    # missing shard.
+    if {int(x.name[len("land-shard-"):-len(".ndjson.gz")]) for x in shards}!=set(range(32)):
+        raise AssertionError("Not all 32 original shard identities present")
+    if {json.loads(x.read_text())["shard"] for x in summaries}!=set(range(32)):
+        raise AssertionError("Missing original shard summary IDs")
     return data,by_zoom
 
 

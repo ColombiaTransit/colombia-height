@@ -283,7 +283,7 @@ def run(manifest, osm_path, osm_meta, output, mode="pilot", incomplete=None):
                "osm_land_and_igac_missing_pixel_cell_hits":(stats["osm_land_and_igac_missing_pixel_cell_hits"] if igac is not None else None),
                "igac_mask_available":igac is not None,
                "outside_osm_missing_cell_hits_UNKNOWN":stats["outside_osm_missing_cell_hits_UNKNOWN"],
-               "review_tier":classify_candidate(stats),
+               "review_tier":classify_candidate({**stats, "igac_mask_available":igac is not None}),
                "source_promoted":False,"native_cog_recovery_not_measured":True}
         ranked.append(entry)
     ranked.sort(key=lambda x:(x["review_tier"],

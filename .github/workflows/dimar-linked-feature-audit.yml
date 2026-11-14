@@ -1,0 +1,49 @@
+name: Audit Official DIMAR Linked Coastal Feature Layers
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/dimar-linked-feature-audit.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install GIS dependencies
+        run: python -m pip install -r requirements-terrain.txt -r requirements-island-inventory.txt
+      - name: Run all regression tests
+        run: python -m unittest discover -s tests -v
+      - name: Audit DIMAR-linked feature schemas and site count-only queries
+        run: python scripts/dimar_linked_feature_audit.py --output output/dimar-linked-feature-schema.json
+      - name: Confirm strict no-source-change and land-mask publication lock
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path("output/dimar-linked-feature-schema.json").read_text())
+          assert r["layers_inspected"]==3
+          assert r["selected_original_COGs_unchanged"]==137
+          assert r["further_COG_candidates_under_review"]==52
+          assert r["authoritative_emerged_land_polygon_established"] is False
+          assert r["national_publication_allowed"] is False
+          assert all(not x["production_land_mask_verified"] for x in r["source_layers"])
+          print("Official DIMAR public metadata layers:",r["metadata_readable_count"])
+          print("No land/water fill or new source selection has been authorized")
+          PY
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: colombia-dimar-linked-feature-audit
+          path: output/dimar-linked-feature-schema.json
+          retention-days: 1
+          if-no-files-found: error

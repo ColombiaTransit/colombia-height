@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-14",
+  "decision": "approve_Tumaco_N01_W080_as_third_Copernicus_source_in_separate_140_source_staging_only",
+  "original_verified_production_source_count": 137,
+  "prior_island_staged_source_count": 139,
+  "new_staged_source_count": 140,
+  "baseline_139_staging_run": 43604399337,
+  "baseline_139_national_coverage_run": 43605294875,
+  "candidate": {
+    "name": "Copernicus_DSM_COG_10_N01_00_W080_00_DEM",
+    "region": "Tumaco, Nariño, Colombia",
+    "source_cell": {
+      "latitude": 1,
+      "longitude": -80
+    },
+    "official_administrative_source": "https://mapas2.igac.gov.co/server/rest/services/limites/limites/MapServer/2",
+    "official_administrative_intersection_run": 43497166858,
+    "native_original_COG_z13_test_run": 43497684367,
+    "native_original_COG_24tile_valid_height_samples_recovered": 460333,
+    "native_original_COG_recovered_samples_inside_IGAC_departments": 6602,
+    "staged139_residual_IGAC_positive_z13_source_gap_pixels": 5865,
+    "staged139_IGAC_residual_tumaco_z13_tiles": 2,
+    "native_30m_79W_border_qa_run": 43608660364,
+    "native_30m_79W_border_valid_samples": 350,
+    "native_30m_79W_border_max_height_step_m": 7.888,
+    "native_30m_79W_border_disproportionate_flag_count": 0,
+    "georeferenced_original_COG_border_gap_m": 0,
+    "approval": "staging_140_research_only",
+    "scope_notice": "IGAC department land pixels are positive administrative evidence, NOT a certified fine coast polygon. Extra 1-degree source cell may contain ocean/foreign land."
+  },
+  "original_139_manifest_mutation_forbidden": true,
+  "original_137_manifest_mutation_forbidden": true,
+  "source_precedence": "139_previous_sources_unchanged_then_append_Tumaco",
+  "remaining_original_52_omitted_candidates_after_three_staged_sources": 49,
+  "quitasueno_excluded": true,
+  "no_synthetic_water_or_bathymetry": true,
+  "national_Terrain_RGB_publication_allowed": false,
+  "do_not_repeat": [
+    "137 nationwide 32 shards",
+    "139 nationwide incremental audit",
+    "global OSM 1GB download",
+    "Tumaco 24 original z13 tile test",
+    "Tumaco 350 native edge test"
+  ],
+  "next_gate": "Calculate only tiles influenced by Tumaco, subtract exact genuine native DEM recovery from verified 139 totals, separately bound OSM missing land using existing exact per-tile report. Only perform narrow original coastline review if classification still uncertain."
+}

@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-14",
+  "scope": "candidate coordinates for named OSM island land polygon membership, not official territorial land",
+  "source_registry_unchanged": "data/colombia-island-probes.json",
+  "excluded_island": "quitasueno",
+  "candidates": [
+    {
+      "id": "santa_catalina",
+      "old_probe": {
+        "lat": 13.38,
+        "lon": -81.375
+      },
+      "research_probes": [
+        {
+          "lat": 13.38798,
+          "lon": -81.37467,
+          "type": "island_OSM_way_map_location",
+          "origin": "Mapcarta OSM way 20391863",
+          "source_url": "https://mapcarta.com/es/19683396",
+          "source_osm_url": "https://www.openstreetmap.org/way/20391863"
+        },
+        {
+          "lat": 13.3846833,
+          "lon": -81.3789802,
+          "type": "named_locality_not_island_centroid",
+          "origin": "CORALINA study Santa Catalina locality",
+          "source_url": "https://observatorio.coralina.gov.co/wp-content/uploads/2025/10/Capitulo-3.-Estudio-piloto-especies-priorizadas.pdf"
+        }
+      ]
+    },
+    {
+      "id": "gorgonilla",
+      "old_probe": {
+        "lat": 2.93,
+        "lon": -78.19
+      },
+      "research_probes": [
+        {
+          "lat": 2.93935,
+          "lon": -78.21193,
+          "type": "named_island_map_location",
+          "origin": "Mapcarta Gorgonilla based on GeoNames OSM Wikidata",
+          "source_url": "https://mapcarta.com/19709632"
+        },
+        {
+          "lat": 2.941666667,
+          "lon": -78.214333333,
+          "type": "named_island_lighthouse_NOT_island_centroid",
+          "origin": "DIMAR Aviso a navegantes 405 de 2025, Gorgonilla lighthouse 2°56.5 N 78°12.86 W, light withdrawn",
+          "source_url": "https://cioh.dimar.mil.co/webnotice/notice/405/2025/"
+        }
+      ]
+    }
+  ],
+  "policy": {
+    "only_named_approved_OSM_land_polygon_contains_a_proposed_point": false,
+    "need_pixel_accuracy": true,
+    "no_height_synthesis": true,
+    "no_country_sovereignty_inferred": true,
+    "no_source_manifest_promotion": true,
+    "national_publication_allowed": false
+  },
+  "status": "reference_point_candidates_to_be_tested_with_OSM_polygon"
+}

@@ -83,7 +83,7 @@ class ConsolidatedTerrainTests(unittest.TestCase):
 
     def geometry_mocks(self):
         return (patch("consolidated_terrain_pipeline.load_osm_coastline_land",
-                      return_value=(object(), {"reference_wkb_sha256": "examplehash"})),
+                      return_value=(object(), {"reference_wkb_sha256": "a"*64})),
                 patch("consolidated_terrain_pipeline.load_osm_country",
                       return_value=object()))
 
@@ -200,6 +200,7 @@ class ConsolidatedTerrainTests(unittest.TestCase):
         path = self.results / f"chunk-{c['id']}.report.json"
         path.write_text(json.dumps({
             "schema": "colombia-osm-land-only-chunk-v1",
+            "physical_OSM_sha256": "a"*64,
             "chunk_id": c["id"],
             "chunk_sha256": c["sha256"],
             "source_manifest_sha256": plan["source_manifest_sha256"],
@@ -394,6 +395,7 @@ class ConsolidatedTerrainTests(unittest.TestCase):
                                (z,x,y,b"NOT_PNG" if index==0 else mask_png.getvalue()))
             report={
                 "schema":"colombia-osm-land-only-chunk-v1",
+                "physical_OSM_sha256":"a"*64,
                 "chunk_id":chunk["id"],"chunk_sha256":chunk["sha256"],
                 "source_manifest_sha256":plan["source_manifest_sha256"],
                 "national_release_authorized":False,"blocked_coastal_tiles":[],

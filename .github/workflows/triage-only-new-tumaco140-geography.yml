@@ -1,0 +1,77 @@
+name: Classify Only New 140-Source Tumaco NoData Tiles by Country — No DEM/OSM Rerun
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/triage-only-new-tumaco140-geography.yml'
+      - 'scripts/triage_only_new_tumaco140_geography.py'
+      - 'tests/test_triage_only_new_tumaco140_geography.py'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  only-new-tumaco-geography:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install existing geometry dependencies only
+        run: python -m pip install -r requirements-terrain.txt -r requirements-island-inventory.txt
+      - name: Validate no country/ocean inference from partial/no ADM0 geometry
+        run: python -m unittest discover -s tests -p 'test_triage_only_new_tumaco140_geography.py' -v
+      - name: Reuse prior successful 140 native tile report — never recalculate COGs
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ColombiaTransit/colombia-height
+          run-id: 43609826904
+          name: colombia-tumaco-native-139-to-140-only-incremental-coverage
+          path: output/140-native
+      - name: Screen only 68 140-only incomplete Tumaco z13 tiles against Colombia/Ecuador ADM0 land references
+        run: |
+          python scripts/triage_only_new_tumaco140_geography.py \
+            --native-report output/140-native/tumaco-139-to-140-exact-increment.json \
+            --old-residual data/staged140-residual-geography-2026-11-14.json \
+            --output output/tumaco140-geo/tumaco-new-z13-geographic-reference.json
+      - name: Reconcile exactly the new 68 native NoData tile counts and the unchanged old 27 cases
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('output/tumaco140-geo/tumaco-new-z13-geographic-reference.json').read_text())
+          assert r['source_verification_run']==43609826904
+          assert r['source_140_unchanged'] is True
+          assert r['new_140_scope_candidate_z13_tiles']==552
+          assert r['new_140_scope_partially_covered_z13_tiles']==68
+          assert r['new_140_scope_native_NoData_sample_pixels']==2688103
+          assert len(r['original_missing_native_samples_each_z13_tile'])==68
+          assert sum(x['original_verified_native_NoData_pixel_centers'] for x in r['original_missing_native_samples_each_z13_tile'])==2688103
+          assert sum(r['reference_groups_missing_native_samples'].values())==2688103
+          assert sum(r['reference_groups_tile_count'].values())==68
+          assert len(r['country_reference_loaded'])==2
+          assert r['previous_139_scope_ambiguous_tiles_left_unchanged']==27
+          assert r['previous_139_scope_ambiguous_OSM_land_NoData_pixels_unchanged']==394622
+          assert r['no_GLO30_native_raster_downloads'] is True
+          assert r['no_OSM_land_archive_download'] is True
+          assert r['previous_native_140_source_QA_not_repeated'] is True
+          assert r['partial_contact_does_not_assign_any_pixel_to_a_country'] is True
+          assert r['no_contact_does_not_prove_sea'] is True
+          assert r['national_Terrain_RGB_publication_allowed'] is False
+          print('Land reference grouping for 68 new Tumaco incomplete tiles:',r['reference_groups_tile_count'])
+          print('Unknown native NoData by ADM0 contact group:',r['reference_groups_missing_native_samples'])
+          print('No re-download of any native DEM/OSM, no national Terrain-RGB release')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: colombia-only-new-tumaco-140-geographic-context-no-native-reruns
+          path: output/tumaco140-geo/tumaco-new-z13-geographic-reference.json
+          retention-days: 1
+          if-no-files-found: error

@@ -1,0 +1,55 @@
+name: Validate National 140-COG Terrain Draft Generator — Offline Only
+
+on:
+  push:
+    paths:
+      - 'scripts/run_national_draft_stage.sh'
+      - 'scripts/consolidated_terrain_pipeline.py'
+      - 'scripts/render_only_coast_rgb.py'
+      - 'tests/test_consolidated_terrain_pipeline.py'
+      - '.github/workflows/national-terrain-draft-build.yml'
+      - '.github/workflows/validate-national-terrain-draft.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Validate shell and parse GitHub YAML (NO releases, NO native downloads)
+        run: |
+          bash -n scripts/run_national_draft_stage.sh
+          python -m pip install PyYAML
+          python - <<'PY'
+          import yaml
+          from pathlib import Path
+          p=Path(".github/workflows/national-terrain-draft-build.yml")
+          d=yaml.safe_load(p.read_text())
+          assert isinstance(d,dict) and "jobs" in d
+          assert set(d["jobs"])=={"prepare","build-shards","merge"}
+          assert len(d["jobs"]["build-shards"]["strategy"]["matrix"]["shard"])==32
+          assert d["jobs"]["build-shards"]["strategy"]["max-parallel"]<=4
+          assert d["permissions"]["contents"]=="write"
+          assert "workflow_dispatch" in p.read_text()
+          assert "push:" not in p.read_text()
+          print("PASS: manual-only 32-shard draft build YAML and shell syntax")
+          PY
+      - name: Original plus country-clipped generator, resume and merge tests
+        run: |
+          python -m pip install -r requirements-terrain.txt -r requirements-island-inventory.txt
+          python -m unittest discover -s tests -p 'test_generate_osm_land_only_terrain.py' -v
+          python -m unittest discover -s tests -p 'test_render_only_coast_rgb.py' -v
+          python -m unittest discover -s tests -p 'test_consolidated_terrain_pipeline.py' -v
+      - name: Show command-line examples and full native zoom range
+        run: |
+          python scripts/consolidated_terrain_pipeline.py plan --help
+          python scripts/consolidated_terrain_pipeline.py shard --help
+          python scripts/consolidated_terrain_pipeline.py merge --help

@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"scripts"))
-from dimar_hub_discovery import HUB_URL, portal_identity_from_items, shortlist
+from dimar_hub_discovery import HUB_URL, OFFICIAL_LINKED_EXPERIENCE_ID, experience_identity, portal_identity_from_items, shortlist
 
 
 class DIMARHubTests(unittest.TestCase):
@@ -43,6 +43,22 @@ class DIMARHubTests(unittest.TestCase):
         records=shortlist(data,[])
         self.assertEqual(len(records),1)
         self.assertTrue(records[0]["provenance"].endswith("UNVERIFIED"))
+
+    def test_direct_dimar_portal_linked_experience_proves_org_lead(self):
+        class Response:
+            def raise_for_status(self):
+                return None
+            def json(self):
+                return {"id":OFFICIAL_LINKED_EXPERIENCE_ID,
+                        "orgId":"RB7c27NVd25mjSSc","owner":"esricol_DIMAR"}
+        class Session:
+            def get(self, url, **kwargs):
+                self.url=url
+                return Response()
+        session=Session()
+        identity=experience_identity(session)
+        self.assertEqual(identity[0]["org_id"],"RB7c27NVd25mjSSc")
+        self.assertIn(OFFICIAL_LINKED_EXPERIENCE_ID,session.url)
 
     def test_conflicting_organization_identity_fails_closed(self):
         entries=[{"url":HUB_URL,"orgId":"A","type":"Hub Site Application"},

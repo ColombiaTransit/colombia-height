@@ -38,11 +38,11 @@ jobs:
           assert r["national_publication_allowed"] is False
           assert all(i["land_mask_status"]=="NOT_VERIFIED_NO_GEOMETRY"
                      for i in r["coastal_or_island_search_items"])
-          if not r["arcgis_item_org_verified_by_exact_hub_match"]:
+          if not (r["arcgis_item_org_verified_by_exact_hub_match"] or r["arcgis_org_verification_via_official_linked_experience"]):
               assert all(i["provenance"]=="ARCGIS_SEARCH_ONLY_PUBLISHER_UNVERIFIED"
                          for i in r["coastal_or_island_search_items"])
           print("Search items",r["items_total"])
-          print("Verified Hub organization",r["arcgis_item_org_verified_by_exact_hub_match"])
+          print("Publisher organization evidence",r["publisher_organization_evidence_type"])
           print("No official land/sea mask or DEM source promotion")
           PY
       - uses: actions/upload-artifact@v4

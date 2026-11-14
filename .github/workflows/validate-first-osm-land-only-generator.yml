@@ -1,0 +1,43 @@
+name: Validate First OSM Land-Only Terrain-RGB Generator — Inland Safe Pilot
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/validate-first-osm-land-only-generator.yml'
+      - 'scripts/generate_osm_land_only_terrain.py'
+      - 'tests/test_generate_osm_land_only_terrain.py'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-first-generator:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install existing native Copernicus and OSM geometry requirements
+        run: python -m pip install -r requirements-terrain.txt -r requirements-island-inventory.txt
+      - name: Test source priority, OSM land masks, no sea, native 0m validity, inland RGB roundtrip and SQLite MBTiles
+        run: python -m unittest discover -s tests -p 'test_generate_osm_land_only_terrain.py' -v
+      - name: Verify existing OSM physical Colombian land policy tests, without native or OSM downloads
+        run: python -m unittest discover -s tests -p 'test_osm_land_only_dem_policy.py' -v
+      - name: Confirm safe generator CLI accepts existing land clip, original source manifest and OSM Colombia relation without forced downloads
+        run: |
+          python scripts/generate_osm_land_only_terrain.py --help
+          python - <<'PY'
+          from pathlib import Path
+          source=Path('scripts/generate_osm_land_only_terrain.py').read_text()
+          assert 'mixed OSM land/coast tiles require reviewed' in source
+          assert 'parse_manifest(source_manifest)' in source
+          assert 'load_osm_coastline_land(land_clip,land_meta)' in source
+          assert 'load_osm_country(country_json)' in source
+          assert 'full_land_tiles_written' in source
+          print('Generator uses only supplied recorded OSM land polygon clip and 140-source manifest.')
+          print('NO national Terrain-RGB product generated or published; no ocean DEM and no global OSM re-fetch.')
+          PY

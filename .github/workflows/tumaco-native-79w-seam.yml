@@ -1,0 +1,96 @@
+name: Tumaco 79W Original Native COG Border — Only New Seam QA
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/tumaco-native-79w-seam.yml'
+      - 'scripts/tumaco_native_longitude_seam.py'
+      - 'tests/test_tumaco_native_longitude_seam.py'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  native-longitude-seam-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install existing source raster dependencies
+        run: python -m pip install -r requirements-terrain.txt -r requirements-island-inventory.txt
+      - name: Test only targeted native longitude seam sampling
+        run: python -m unittest discover -s tests -p 'test_tumaco_native_longitude_seam.py' -v
+      - name: Reuse already approved 139-source staging ARTIFACT rather than regenerating 137 inventory
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ColombiaTransit/colombia-height
+          run-id: 43604399337
+          name: colombia-strict-staged-139-two-offshore-island-cogs
+          path: output/staged-original
+      - name: Recover exactly original first 137 source records without any inventory refetch
+        run: |
+          python - <<'PY'
+          import csv
+          from pathlib import Path
+          source=Path('output/staged-original/colombia_dem_manifest_island_staging_139.csv')
+          with source.open(newline='') as f:
+              rows=list(csv.DictReader(f))
+          assert len(rows)==139 and len({r['name'] for r in rows})==139
+          assert all(r['status']=='ok' for r in rows)
+          tail={r['name'] for r in rows[137:]}
+          assert tail=={
+              'Copernicus_DSM_COG_10_N03_00_W082_00_DEM',
+              'Copernicus_DSM_COG_10_N03_00_W079_00_DEM'}
+          names={r['name'] for r in rows[:137]}
+          assert 'Copernicus_DSM_COG_10_N01_00_W079_00_DEM' in names
+          assert 'Copernicus_DSM_COG_10_N01_00_W080_00_DEM' not in names
+          target=Path('output/colombia_dem_manifest_extended.csv')
+          target.parent.mkdir(parents=True,exist_ok=True)
+          with target.open('w',newline='') as out:
+              writer=csv.DictWriter(out,fieldnames=list(rows[0]))
+              writer.writeheader()
+              writer.writerows(rows[:137])
+          print('Reused unchanged original 137-source precedence with no source re-inventory')
+          PY
+      - name: Test only native longitude seam -79 W at ~30m, no Tumaco 24tile / national DEM rerun
+        run: |
+          python scripts/tumaco_native_longitude_seam.py \
+            --manifest output/colombia_dem_manifest_extended.csv \
+            --output output/tumaco-native-source-edge/tumaco-native-longitude-seam.json
+      - name: Check native seam and strict staging/release gates
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('output/tumaco-native-source-edge/tumaco-native-longitude-seam.json').read_text())
+          assert r['source_boundary_longitude']==-79.
+          assert r['original_24tile_Tumaco_native_recovery_verified_run']==43497684367
+          assert r['IGAC_dept_positive_native_recovery_was_previously_verified'] is True
+          assert r['number_of_boundary_latitude_samples']==350
+          assert r['inward_native_columns_each_side']==6
+          assert r['seam_statistics']['native_cross_border']['count']>0, 'Cannot approve an unobserved border'
+          assert r['border_native_valid_samples_present'] is True
+          assert r['no_original_source_elevation_modified'] is True
+          assert r['only_existing_two_native_COGs_downloaded'] is True
+          assert r['no_redundant_national_or_24tile_native_audit'] is True
+          assert r['source_auto_added_to_139_staging'] is False
+          assert r['source_countrywide_publication_allowed'] is False
+          assert r['synthetic_ocean_or_bathymetry_created'] is False
+          assert r['quitasueno_excluded'] is True
+          print('Native Tumaco source edge diagnostics:',r['seam_statistics'])
+          print('NO 24tile rerun, NO source promotion, NO national DEM or OSM download')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: colombia-tumaco-N01W080-native-79W-only-seam-evidence
+          path: output/tumaco-native-source-edge/tumaco-native-longitude-seam.json
+          retention-days: 1
+          if-no-files-found: error

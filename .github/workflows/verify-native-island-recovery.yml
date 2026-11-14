@@ -1,0 +1,90 @@
+name: Verify Exact Malpelo and Gorgona Native Island DEM Recovery
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/verify-native-island-recovery.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  native-island-recovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install existing DEM and OSM polygon QA requirements
+        run: python -m pip install -r requirements-terrain.txt -r requirements-island-inventory.txt
+      - name: Run complete offline tests including strict native height and island mask safeguards
+        run: python -m unittest discover -s tests -v
+      - name: Recover the frozen exact 97 Malpelo and 86 Gorgona OSM-land pixels
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ColombiaTransit/colombia-height
+          run-id: 43593099062
+          name: colombia-named-island-exact-osm-native-dem-evidence
+          path: output/island-previous
+      - name: Regenerate original audited 137-source manifest
+        run: |
+          python scripts/inventory.py --output output --workers 8
+          python scripts/extend_inventory.py --inventory output --islands data/colombia-island-probes.json
+          python - <<'PY'
+          import csv
+          with open('output/colombia_dem_manifest_extended.csv',newline='') as f:
+              rows=list(csv.DictReader(f))
+          assert len(rows)==137 and all(x['status']=='ok' for x in rows)
+          assert 'Copernicus_DSM_COG_10_N03_00_W082_00_DEM' not in {x['name'] for x in rows}
+          assert 'Copernicus_DSM_COG_10_N03_00_W079_00_DEM' not in {x['name'] for x in rows}
+          print('Original native Copernicus source count is still exactly 137')
+          PY
+      - name: Download OSM land reference once and clip to Colombia study rectangle
+        run: python scripts/osm_land_reference.py --output output/osm-reference
+      - name: Compare actual native Copernicus pixels before/after on both OSM islands and explore unresolved nearby polygons
+        run: |
+          python scripts/island_native_recovery_qa.py \
+            --manifest output/colombia_dem_manifest_extended.csv \
+            --osm output/osm-reference/osm-land-study.wkb.gz \
+            --osm-meta output/osm-reference/osm-land-study-metadata.json \
+            --island-report output/island-previous/native-island-polygon-qa.json \
+            --probes data/colombia-island-probes.json \
+            --output output/island-native-recovery/island-native-recovery.json
+      - name: Reconcile all 183 initial island NoData samples without synthetic heights
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('output/island-native-recovery/island-native-recovery.json').read_text())
+          assert r['original_selected_source_COG_count']==137
+          assert set(r['island_native_recovery'])=={'malpelo','gorgona'}
+          assert r['original_island_gaps']=={'malpelo':97,'gorgona':86}
+          assert r['quitasueno_excluded'] is True
+          assert r['osm_not_certified_Colombian_jurisdiction'] is True
+          assert r['no_source_promoted_to_manifest'] is True
+          assert r['no_synthetic_ocean_or_dem_values'] is True
+          assert r['national_publication_allowed'] is False
+          for name,s in r['island_native_recovery'].items():
+              assert s['OSM_island_native_missing_before']==r['original_island_gaps'][name]
+              assert s['OSM_island_native_recovered_with_real_COG'] + s['OSM_island_native_still_missing_after']==r['original_island_gaps'][name]
+              assert s['native_heights_unchanged_max_abs_m']<=.001
+              assert s['all_new_heights_native_Copernicus'] is True
+              assert s['source_permanently_selected'] is False
+          assert set(r['unresolved_island_polygon_leads'])=={'santa_catalina','gorgonilla'}
+          assert all(x['no_polygon_or_probe_automatically_accepted'] for x in r['unresolved_island_polygon_leads'].values())
+          print('Real native island recoveries:',{name:{'recovered':s['OSM_island_native_recovered_with_real_COG'],'remaining':s['OSM_island_native_still_missing_after']} for name,s in r['island_native_recovery'].items()})
+          print('No source promoted; no artificial ocean heights; no release')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: colombia-malpelo-gorgona-exact-native-recovery-and-island-leads
+          path: output/island-native-recovery/island-native-recovery.json
+          retention-days: 1
+          if-no-files-found: error

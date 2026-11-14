@@ -27,7 +27,7 @@ from generate_osm_land_only_terrain import (
 )
 from merge_regions import merge_mbtiles
 from national_tile_plan import candidate_tiles, owner, parse_manifest
-from render_only_coast_rgb import COAST_MODE, decode_mask_png
+from render_only_coast_rgb import COAST_MODE, COUNTRY_CLIP_MODE, decode_mask_png
 
 MIN_SAFE_ZOOM = 0
 MAX_SAFE_ZOOM = 13
@@ -180,8 +180,11 @@ def load_chunk(plan_dir, chunk_id):
 
 
 def render_chunk(plan_dir, chunk_id, manifest, land_clip, land_meta,
-                 country_json, output_dir, cache, coast_render_surface=False):
-    """Produce native OSM chunk; mixed coast needs explicit render-only opt-in."""
+                 country_json, output_dir, cache, coast_render_surface=False,
+                 country_clip_background=False, prepared_geometry=None):
+    """Produce native OSM chunk; explicit mode can flatten foreign outscope for display."""
+    if country_clip_background and not coast_render_surface:
+        raise ValueError("Explicit country-clipped background requires coast render mode")
     plan, info, tiles = load_chunk(plan_dir, chunk_id)
     if sha256_file(manifest) != plan["source_manifest_sha256"]:
         raise ValueError("Source manifest changed after immutable plan creation")
@@ -193,8 +196,11 @@ def render_chunk(plan_dir, chunk_id, manifest, land_clip, land_meta,
         raise FileExistsError("Chunk already processed: do not overwrite successful/blocked evidence")
     sources = parse_manifest(manifest)
     require_verified_staging(sources)
-    physical, meta = load_osm_coastline_land(land_clip, land_meta)
-    country = load_osm_country(country_json)
+    if prepared_geometry is None:
+        physical, meta = load_osm_coastline_land(land_clip, land_meta)
+        country = load_osm_country(country_json)
+    else:
+        physical, meta, country = prepared_geometry
     if coast_render_surface:
         statuses, rows = prepare_plan(tiles, physical, country, include_physical=True)
     else:
@@ -213,7 +219,8 @@ def render_chunk(plan_dir, chunk_id, manifest, land_clip, land_meta,
         "planned_tiles": len(tiles),
         "mask_summary": dict(statuses),
         "blocked_coastal_tiles": blocked if not coast_render_surface else [],
-        "coast_render_mode": COAST_MODE if coast_render_surface else "strict_inland",
+        "coast_render_mode": (COUNTRY_CLIP_MODE if country_clip_background else
+                              COAST_MODE if coast_render_surface else "strict_inland"),
         "national_release_authorized": False,
     }
     if blocked and not coast_render_surface:
@@ -224,7 +231,7 @@ def render_chunk(plan_dir, chunk_id, manifest, land_clip, land_meta,
         raise RuntimeError(
             f"Chunk {chunk_id}: {len(blocked)} mixed coast/island tiles. "
             "No native sources fetched and no MBTiles emitted; see blocker report.")
-    if statuses.get("mixed_foreign_physical_OSM_land_blocked", 0):
+    if statuses.get("mixed_foreign_physical_OSM_land_blocked", 0) and not country_clip_background:
         report = {**base, "status": "BLOCKED_foreign_land_cannot_be_sea",
                   "blocked_coastal_tiles": blocked,
                   "full_land_tiles_written": 0,
@@ -250,7 +257,8 @@ def render_chunk(plan_dir, chunk_id, manifest, land_clip, land_meta,
             mbtiles, rows, sources, cache,
             (-84.0, -5.0, -66.0, 17.0),
             (min(t[0] for t in tiles), max(t[0] for t in tiles)),
-            coast_render_surface=True)
+            coast_render_surface=True,
+            country_clip_background=country_clip_background)
     else:
         result = write_inland_mbtiles(
             mbtiles, rows, sources, cache,
@@ -298,7 +306,7 @@ def merge_verified_chunks(plan_dir, result_dir, target):
                 or written+mixed+skipped != chunk["tiles"]):
             raise ValueError(f"Missing/silent skipped tile in {chunk['id']}")
         render_mode=report.get("coast_render_mode","strict_inland")
-        if render_mode not in ("strict_inland",COAST_MODE):
+        if render_mode not in ("strict_inland",COAST_MODE,COUNTRY_CLIP_MODE):
             raise ValueError("Unexpected or unsupported render mode")
         if report["status"] == "SKIPPED_no_Colombian_OSM_land":
             if written:
@@ -306,7 +314,7 @@ def merge_verified_chunks(plan_dir, result_dir, target):
             continue
         if ((report["status"] not in ("SUCCESS_inland_only","SUCCESS_render_only_coast"))
                 or (report["status"]=="SUCCESS_inland_only" and render_mode!="strict_inland")
-                or (report["status"]=="SUCCESS_render_only_coast" and render_mode!=COAST_MODE)
+                or (report["status"]=="SUCCESS_render_only_coast" and render_mode not in (COAST_MODE,COUNTRY_CLIP_MODE))
                 or written+report.get("mixed_coast_tiles_written",0)==0):
             raise RuntimeError(f"Chunk {chunk['id']} not successfully rendered")
         name = f"chunk-{chunk['id']}.mbtiles"
@@ -320,7 +328,7 @@ def merge_verified_chunks(plan_dir, result_dir, target):
                 raise ValueError("Chunk MBTiles failed SQLite validation")
             if db.execute("SELECT count(*) FROM tiles").fetchone()[0] != written+mixed:
                 raise ValueError("Chunk reported incorrect native XYZ count")
-            if render_mode==COAST_MODE:
+            if render_mode in (COAST_MODE,COUNTRY_CLIP_MODE):
                 mask_count=db.execute("SELECT COUNT(*) FROM osm_land_mask").fetchone()[0]
                 if mask_count!=written+mixed:
                     raise ValueError("Coast-render MBTiles has missing exact OSM land masks")
@@ -355,7 +363,7 @@ def merge_verified_chunks(plan_dir, result_dir, target):
         if merged["tiles"]!=actual:
             raise AssertionError("Merged native tile counts differ from verified reports")
         with sqlite3.connect(tmp) as db:
-            if input_modes=={COAST_MODE}:
+            if input_modes in ({COAST_MODE},{COUNTRY_CLIP_MODE}):
                 db.execute("""CREATE TABLE osm_land_mask(
                     zoom_level INTEGER, tile_column INTEGER, tile_row INTEGER,
                     mask_png BLOB, PRIMARY KEY(zoom_level,tile_column,tile_row))""")
@@ -367,21 +375,28 @@ def merge_verified_chunks(plan_dir, result_dir, target):
                             db.execute("INSERT INTO osm_land_mask VALUES (?,?,?,?)",(z,x,y,blob))
                 if db.execute("SELECT COUNT(*) FROM osm_land_mask").fetchone()[0]!=actual:
                     raise AssertionError("Merge discarded factual OSM land masks")
-                db.execute("INSERT INTO metadata VALUES(?,?)",("coast_render_mode",COAST_MODE))
+                db.execute("INSERT INTO metadata VALUES(?,?)",
+                           ("coast_render_mode",next(iter(input_modes))))
                 db.execute("INSERT INTO metadata VALUES(?,?)",("visualization_sea_surface_m","0"))
                 db.execute("INSERT INTO metadata VALUES(?,?)",("sea_surface_is_bathymetry","false"))
+                db.execute("INSERT INTO metadata VALUES(?,?)",("foreign_land_is_sea","false"))
+                db.execute("INSERT INTO metadata VALUES(?,?)",
+                           ("foreign_land_visual_background_m",
+                            "0" if input_modes=={COUNTRY_CLIP_MODE} else "forbidden"))
                 db.execute("INSERT INTO metadata VALUES(?,?)",("osm_land_mask","osm_land_mask table"))
             db.execute("INSERT OR REPLACE INTO metadata(name,value) VALUES(?,?)",
                        ("attribution", "Contains modified Copernicus DEM data; © OpenStreetMap contributors (ODbL 1.0)"))
-            desc=("Colombia OSM-land Copernicus Terrain-RGB; ZERO-METRE SEA is VISUAL-ONLY, not bathymetry; use factual osm_land_mask. Not a national release."
+            desc=("Colombia original Copernicus land heights; outside-country land and sea use explicitly visual-only 0m display, NOT measured heights/bathymetry; OSM factual mask stored. NOT a national release."
+                  if input_modes=={COUNTRY_CLIP_MODE} else
+                  "Colombia Copernicus land and visual-only 0m OSM sea, NOT bathymetry; exact OSM mask stored. NOT a national release."
                   if input_modes=={COAST_MODE} else
-                  "Colombia inland OSM physical-land-only Terrain-RGB; mixed coast excluded, low zoom pending, NOT a complete national release")
+                  "Colombia inland only Copernicus Terrain-RGB; mixed coast excluded. NOT a national release.")
             db.execute("INSERT OR REPLACE INTO metadata(name,value) VALUES(?,?)",
                        ("description",desc))
             db.commit()
             if db.execute("PRAGMA integrity_check").fetchone()[0]!="ok":
                 raise AssertionError("Final combined OSM masks failed SQLite integrity")
-        report={"status":"MERGED_RENDER_ONLY_NOT_NATIONAL_RELEASE" if input_modes=={COAST_MODE} else "MERGED_INLAND_ONLY_NOT_NATIONAL_RELEASE",
+        report={"status":"MERGED_RENDER_ONLY_NOT_NATIONAL_RELEASE" if input_modes in ({COAST_MODE},{COUNTRY_CLIP_MODE}) else "MERGED_INLAND_ONLY_NOT_NATIONAL_RELEASE",
                 "coast_render_mode":next(iter(input_modes)),
                 "source_manifest_sha256":plan["source_manifest_sha256"],
                 "tiles":actual,"chunks_checked":len(plan["chunks"]),
@@ -418,7 +433,9 @@ def main():
     render.add_argument("--output-dir", type=Path, required=True)
     render.add_argument("--cache", type=Path, default=Path("output/native-cog-cache"))
     render.add_argument("--coast-render-only-sea-surface",action="store_true",
-                        help="Experimental opt-in 0m sea visualization with factual OSM mask; not bathymetry")
+                        help="Explicit visualization-only 0m sea with original OSM land mask; not bathymetry")
+    render.add_argument("--render-flat-outside-colombia",action="store_true",
+                        help="Explicit nationwide display only: foreign land outside Colombia is 0m FLAT BACKGROUND, not sea")
     merge = commands.add_parser("merge", help="Reuse original duplicate-safe MBTiles merger")
     merge.add_argument("--plan-dir", type=Path, required=True)
     merge.add_argument("--result-dir", type=Path, required=True)
@@ -431,7 +448,8 @@ def main():
         render_chunk(args.plan_dir, args.chunk_id, args.manifest,
                      args.osm_land_clip, args.osm_land_meta,
                      args.osm_country_geojson, args.output_dir, args.cache,
-                     coast_render_surface=args.coast_render_only_sea_surface)
+                     coast_render_surface=args.coast_render_only_sea_surface,
+                     country_clip_background=args.render_flat_outside_colombia)
     else:
         merge_verified_chunks(args.plan_dir, args.result_dir, args.output)
 

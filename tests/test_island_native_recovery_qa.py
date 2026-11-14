@@ -61,7 +61,7 @@ class IslandNativeRecoveryTests(unittest.TestCase):
     def test_nearest_polygon_leads_not_island_assignments(self):
         near = box(-81.373, 13.379, -81.371, 13.381)
         known = box(-81.395, 13.325, -81.365, 13.375)
-        secondary = box(-78.193, 2.929, -78.188, 2.931)
+        secondary = box(-78.187, 2.929, -78.185, 2.931)
         probes = [
             {"id":"santa_catalina","lon":-81.375,"lat":13.38},
             {"id":"gorgonilla","lon":-78.19,"lat":2.93},

@@ -1,0 +1,44 @@
+name: Recover Completed Colombia Terrain-RGB — Merge 26 Existing Draft Shards
+
+# One-time recovery of 2026-11-14 original national run #43643486254.
+# Six empty candidate shards (3,8,9,10,25,27) incorrectly failed the
+# hardcoded 32-job matrix. No DEM download, no source audit, NO regeneration.
+# This workflow automatically triggers exactly on its own initial creation.
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/recover-national-terrain-merge-2026-11-14.yml'
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: colombia-terrain-draft-2026-11-14-original-release-final-merge
+  cancel-in-progress: false
+
+jobs:
+  reuse-completed-26-shards:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    env:
+      GH_TOKEN: ${{ github.token }}
+      BUILD_TAG: colombia-terrain-draft-2026-11-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install existing verified native Terrain-RGB/OSM mask validation libraries
+        run: python -m pip install -r requirements-terrain.txt -r requirements-island-inventory.txt
+      - name: Reuse ONLY original completed 26 shard archives and immutable plan from the UNPUBLISHED draft
+        run: |
+          echo 'The six shards without candidate tiles have no release asset by design: 3 8 9 10 25 27.'
+          echo 'This job downloads no Copernicus COG and does not regenerate any terrain.'
+          bash scripts/run_national_draft_stage.sh merge "$BUILD_TAG" 0
+      - name: Record final MBTiles parts only in draft GitHub Release; NEVER publicly publish
+        if: success()
+        run: |
+          test "$(gh release view "$BUILD_TAG" --json isDraft --jq .isDraft)" = true
+          echo "Successfully reused all planned shards into a validated NATIONAL DRAFT output; publication remains disabled."

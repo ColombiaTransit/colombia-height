@@ -1,0 +1,73 @@
+name: Stage Exactly One Verified Tumaco COG After Existing 139 — No National Rebuild
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/stage-tumaco-140.yml'
+      - 'scripts/stage_tumaco_140.py'
+      - 'tests/test_stage_tumaco_140.py'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  staged-140-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install original source registry dependencies only
+        run: python -m pip install -r requirements-terrain.txt -r requirements-island-inventory.txt
+      - name: Run staging evidence and 139-source immutability safeguards
+        run: python -m unittest discover -s tests -p 'test_stage_tumaco_140.py' -v
+      - name: Reuse 139-source published successful staging CSV, not source inventory regeneration
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ColombiaTransit/colombia-height
+          run-id: 43604399337
+          name: colombia-strict-staged-139-two-offshore-island-cogs
+          path: output/stage139
+      - name: Append one independently verified Tumaco native COG only to separate study CSV
+        run: |
+          python scripts/stage_tumaco_140.py \
+            --previous output/stage139/colombia_dem_manifest_island_staging_139.csv \
+            --decision data/staged-tumaco-third-source-2026-11-14.json \
+            --output output/stage140
+      - name: Check exactly 137 original + two island COGs + Tumaco; no production modification or release
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import csv,json
+          old=Path('output/stage139/colombia_dem_manifest_island_staging_139.csv')
+          new=Path('output/stage140/colombia_dem_manifest_tumaco_staging_140.csv')
+          with old.open(newline='') as stream:
+              original=list(csv.DictReader(stream))
+          with new.open(newline='') as stream:
+              staged=list(csv.DictReader(stream))
+          r=json.loads(Path('output/stage140/140-source-tumaco-stage-report.json').read_text())
+          assert len(original)==139 and len(staged)==140
+          assert [x['name'] for x in staged[:139]]==[x['name'] for x in original]
+          assert staged[-1]['name']=='Copernicus_DSM_COG_10_N01_00_W080_00_DEM'
+          assert all(x['status']=='ok' for x in staged)
+          assert r['production_original_COG_count_unchanged']==137
+          assert r['remaining_omitted_original_candidates']==49
+          assert r['no_artificial_DEM_ocean_or_bathymetry']
+          assert r['national_Terrain_RGB_publication_allowed'] is False
+          print('Verified separate 140-source staging CSV; original 137 and 139 priorities retained')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: colombia-tumaco-strict-source-staging-140
+          path: |
+            output/stage140/colombia_dem_manifest_tumaco_staging_140.csv
+            output/stage140/140-source-tumaco-stage-report.json
+          retention-days: 1
+          if-no-files-found: error

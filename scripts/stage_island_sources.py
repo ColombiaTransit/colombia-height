@@ -79,8 +79,12 @@ def construct_staging_rows(original, additions):
                 or s.get("status")!="ok" or int(s.get("size_bytes") or 0)<=0
                 or not s.get("url","").endswith(s["name"]+".tif")):
             raise AssertionError("Source COG identity, provenance or content size not verified")
-    staged=sorted([dict(x) for x in original]+[dict(x) for x in additions],
-                  key=lambda s:(int(s["latitude"]),int(s["longitude"]),s["name"]))
+    # Preserve precedence for every original 137-source COG, including native
+    # bilinear overlap at adjacent degree-cell borders. A sorted 139-source
+    # list could place a new COG ahead of an original source and overwrite
+    # preexisting valid elevation pixels. Only append staged extras.
+    staged=[dict(x) for x in original]+sorted(
+        [dict(x) for x in additions], key=lambda s:s["name"])
     if len(staged)!=139 or len({s["name"] for s in staged})!=139:
         raise AssertionError("Unexpected staging inventory size")
     return staged

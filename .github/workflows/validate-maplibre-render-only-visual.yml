@@ -1,0 +1,61 @@
+name: Real MapLibre Chromium 3D Coast Rendering Smoke — Reuse Cartagena Artifact
+
+on:
+  push:
+    paths: ['.github/workflows/validate-maplibre-render-only-visual.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  actual-maplibre:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Download ONLY the previously validated real Cartagena MBTiles; no Copernicus/OSM work
+        uses: actions/download-artifact@v4
+        with:
+          repository: ColombiaTransit/colombia-height
+          run-id: 43628318643
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          name: colombia-cartagena-real-osm-coast-visual-only-pilot
+          path: output/cartagena-render
+      - name: Prepare real MapLibre GL JS + headless software WebGL test
+        run: |
+          npm install --no-save maplibre-gl@5 playwright@1
+          npx playwright install --with-deps chromium
+      - name: Serve real already-verified terrain RGB from read-only SQLite
+        run: |
+          test -f output/cartagena-render/cartagena-visual-terrain-rgb.mbtiles
+          python scripts/serve_existing_terrain_mbtiles.py \
+            --mbtiles output/cartagena-render/cartagena-visual-terrain-rgb.mbtiles \
+            --repo-root . --port 8765 > /tmp/terrain-tile-server.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8765/ >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/terrain-tile-server.log
+          exit 1
+      - name: Actual browser: 3D terrain + hillshade + queryTerrainElevation + screenshot
+        run: |
+          node scripts/maplibre_coast_browser_smoke.js
+          cat output/maplibre-preview/browser-smoke-result.json
+      - name: Upload browser screenshot and WebGL/MapLibre validation log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: colombia-cartagena-maplibre-visual-render-smoke
+          path: |
+            output/maplibre-preview/*.png
+            output/maplibre-preview/*.json
+          retention-days: 7
+          if-no-files-found: warn

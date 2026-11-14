@@ -1,7 +1,7 @@
 {
   "version": 1,
   "source_run": "https://github.com/ColombiaTransit/colombia-height/actions/runs/43195302813",
-  "description": "Eight Natural Earth 1:10m minor-island polygons nominated near current island probes. Existing 137-tile source manifest contains all their source degree cells; land existence, actual DEM values and official territorial attribution remain unverified.",
+  "description": "Eight Natural Earth 1:10m minor-island polygons nominated near current island probes. Existing 137-tile source manifest contains all their source degree cells; land existence, actual DEM values and official territorial attribution remain unverified. Direct native COG center-height samples and z13 Natural Earth minor-reference polygon masks audited in run 43596436204: all 8 had valid source data, 11,629 valid z13 reference-land pixel centers, 0 missing. Six native center points have actual source height 0m; this is not fabricated fill but must NOT prove land/water identity or certified geography.",
   "candidates": [
     {
       "id": "ne_minor_01",
@@ -11,9 +11,14 @@
       "expected_cog": "Copernicus_DSM_COG_10_N09_00_W076_00_DEM",
       "in_original_137_manifest": true,
       "source_file_exists": true,
-      "actual_dem_validity": "not_checked",
+      "actual_dem_validity": "verified_native_original_source_sample_and_no_z13_polygon_NoData",
       "official_territorial_review": "pending",
-      "disposition": "source_cell_already_included_no_extra_download"
+      "disposition": "source_cell_already_included_no_extra_download",
+      "native_original_30m_height_sample_m": 4.2304768562316895,
+      "original_valid_z13_minor_reference_polygon_pixel_centers": 844,
+      "original_missing_z13_minor_reference_polygon_pixel_centers": 0,
+      "verified_in_run": "https://github.com/ColombiaTransit/colombia-height/actions/runs/43596436204",
+      "source_height_zero_is_not_proof_of_water_or_land": false
     },
     {
       "id": "ne_minor_02",
@@ -23,9 +28,14 @@
       "expected_cog": "Copernicus_DSM_COG_10_N09_00_W076_00_DEM",
       "in_original_137_manifest": true,
       "source_file_exists": true,
-      "actual_dem_validity": "not_checked",
+      "actual_dem_validity": "verified_native_original_source_sample_and_no_z13_polygon_NoData",
       "official_territorial_review": "pending",
-      "disposition": "source_cell_already_included_no_extra_download"
+      "disposition": "source_cell_already_included_no_extra_download",
+      "native_original_30m_height_sample_m": 2.986795663833618,
+      "original_valid_z13_minor_reference_polygon_pixel_centers": 9191,
+      "original_missing_z13_minor_reference_polygon_pixel_centers": 0,
+      "verified_in_run": "https://github.com/ColombiaTransit/colombia-height/actions/runs/43596436204",
+      "source_height_zero_is_not_proof_of_water_or_land": false
     },
     {
       "id": "ne_minor_03",
@@ -35,9 +45,14 @@
       "expected_cog": "Copernicus_DSM_COG_10_N15_00_W080_00_DEM",
       "in_original_137_manifest": true,
       "source_file_exists": true,
-      "actual_dem_validity": "not_checked",
+      "actual_dem_validity": "verified_native_original_source_sample_and_no_z13_polygon_NoData",
       "official_territorial_review": "pending",
-      "disposition": "source_cell_already_included_no_extra_download"
+      "disposition": "source_cell_already_included_no_extra_download",
+      "native_original_30m_height_sample_m": 0,
+      "original_valid_z13_minor_reference_polygon_pixel_centers": 730,
+      "original_missing_z13_minor_reference_polygon_pixel_centers": 0,
+      "verified_in_run": "https://github.com/ColombiaTransit/colombia-height/actions/runs/43596436204",
+      "source_height_zero_is_not_proof_of_water_or_land": true
     },
     {
       "id": "ne_minor_04",
@@ -47,9 +62,14 @@
       "expected_cog": "Copernicus_DSM_COG_10_N15_00_W080_00_DEM",
       "in_original_137_manifest": true,
       "source_file_exists": true,
-      "actual_dem_validity": "not_checked",
+      "actual_dem_validity": "verified_native_original_source_sample_and_no_z13_polygon_NoData",
       "official_territorial_review": "pending",
-      "disposition": "source_cell_already_included_no_extra_download"
+      "disposition": "source_cell_already_included_no_extra_download",
+      "native_original_30m_height_sample_m": 0,
+      "original_valid_z13_minor_reference_polygon_pixel_centers": 106,
+      "original_missing_z13_minor_reference_polygon_pixel_centers": 0,
+      "verified_in_run": "https://github.com/ColombiaTransit/colombia-height/actions/runs/43596436204",
+      "source_height_zero_is_not_proof_of_water_or_land": true
     },
     {
       "id": "ne_minor_05",
@@ -59,9 +79,14 @@
       "expected_cog": "Copernicus_DSM_COG_10_N15_00_W080_00_DEM",
       "in_original_137_manifest": true,
       "source_file_exists": true,
-      "actual_dem_validity": "not_checked",
+      "actual_dem_validity": "verified_native_original_source_sample_and_no_z13_polygon_NoData",
       "official_territorial_review": "pending",
-      "disposition": "source_cell_already_included_no_extra_download"
+      "disposition": "source_cell_already_included_no_extra_download",
+      "native_original_30m_height_sample_m": 0,
+      "original_valid_z13_minor_reference_polygon_pixel_centers": 29,
+      "original_missing_z13_minor_reference_polygon_pixel_centers": 0,
+      "verified_in_run": "https://github.com/ColombiaTransit/colombia-height/actions/runs/43596436204",
+      "source_height_zero_is_not_proof_of_water_or_land": true
     },
     {
       "id": "ne_minor_06",
@@ -71,9 +96,14 @@
       "expected_cog": "Copernicus_DSM_COG_10_N15_00_W080_00_DEM",
       "in_original_137_manifest": true,
       "source_file_exists": true,
-      "actual_dem_validity": "not_checked",
+      "actual_dem_validity": "verified_native_original_source_sample_and_no_z13_polygon_NoData",
       "official_territorial_review": "pending",
-      "disposition": "source_cell_already_included_no_extra_download"
+      "disposition": "source_cell_already_included_no_extra_download",
+      "native_original_30m_height_sample_m": 0,
+      "original_valid_z13_minor_reference_polygon_pixel_centers": 298,
+      "original_missing_z13_minor_reference_polygon_pixel_centers": 0,
+      "verified_in_run": "https://github.com/ColombiaTransit/colombia-height/actions/runs/43596436204",
+      "source_height_zero_is_not_proof_of_water_or_land": true
     },
     {
       "id": "ne_minor_07",
@@ -83,9 +113,14 @@
       "expected_cog": "Copernicus_DSM_COG_10_N15_00_W080_00_DEM",
       "in_original_137_manifest": true,
       "source_file_exists": true,
-      "actual_dem_validity": "not_checked",
+      "actual_dem_validity": "verified_native_original_source_sample_and_no_z13_polygon_NoData",
       "official_territorial_review": "pending",
-      "disposition": "source_cell_already_included_no_extra_download"
+      "disposition": "source_cell_already_included_no_extra_download",
+      "native_original_30m_height_sample_m": 0,
+      "original_valid_z13_minor_reference_polygon_pixel_centers": 120,
+      "original_missing_z13_minor_reference_polygon_pixel_centers": 0,
+      "verified_in_run": "https://github.com/ColombiaTransit/colombia-height/actions/runs/43596436204",
+      "source_height_zero_is_not_proof_of_water_or_land": true
     },
     {
       "id": "ne_minor_08",
@@ -95,9 +130,15 @@
       "expected_cog": "Copernicus_DSM_COG_10_N15_00_W079_00_DEM",
       "in_original_137_manifest": true,
       "source_file_exists": true,
-      "actual_dem_validity": "not_checked",
+      "actual_dem_validity": "verified_native_original_source_sample_and_no_z13_polygon_NoData",
       "official_territorial_review": "pending",
-      "disposition": "source_cell_already_included_no_extra_download"
+      "disposition": "source_cell_already_included_no_extra_download",
+      "native_original_30m_height_sample_m": 0,
+      "original_valid_z13_minor_reference_polygon_pixel_centers": 311,
+      "original_missing_z13_minor_reference_polygon_pixel_centers": 0,
+      "verified_in_run": "https://github.com/ColombiaTransit/colombia-height/actions/runs/43596436204",
+      "source_height_zero_is_not_proof_of_water_or_land": true
     }
-  ]
+  ],
+  "native_validation_run": 43596436204
 }

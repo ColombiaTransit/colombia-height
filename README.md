@@ -27,6 +27,19 @@ Neither administrative polygons nor Natural Earth establish a certified
 coastline or the status of every remote island. No additional COG has yet
 been approved for inclusion; all 137 selected COGs remain unchanged.
 
+## OSM land-reference audit (non-publication)
+
+The [OSM native DEM land-coverage study](docs/osm-national-land-coverage.md)
+compares original Copernicus NoData pixels with detailed OSMCoastline
+land polygons, including a four-site island/coast pilot and all 1,917
+original incomplete z13 tiles (the initial 1,004 Natural Earth land-gap
+tiles are tracked separately). The global OSM dataset is downloaded
+only once per workflow run and is not committed or released.
+OSM land is **not** a legal Colombian territory mask, and absence of an
+OSM land polygon does **not** prove ocean; no synthetic elevations or
+automatic source expansions are permitted. Data source attribution:
+**© OpenStreetMap contributors, ODbL 1.0**.
+
 ## Source and attribution
 
 - Elevation: [Copernicus DEM GLO-30 Public](https://registry.opendata.aws/copernicus-dem/), AWS bucket `copernicus-dem-30m`. See the source licence and attribution conditions before redistributing derivatives.

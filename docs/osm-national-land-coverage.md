@@ -81,3 +81,25 @@ Tumaco's built-up area or coast. The pilot then encountered a transient
 **HTTP 503** from the official IGAC REST service. The audit now treats
 that external reference as optional and preserves unknown IGAC measurements
 as **null**, without inferring no land or stopping OSM-only results.
+
+## Completed national z13 OSM audit — successful CI 43573144549
+
+[Run 43573144549](https://github.com/ColombiaTransit/colombia-height/actions/runs/43573144549) completed the 36-tile four-site pilot, all **1,917** original incomplete z13 tiles, and the original **1,004** Natural Earth suspect-tile subset. The complete report is in the short-lived GitHub Actions evidence artifact; aggregate numbers are preserved here.
+
+| Native DEM pixel metric (zoom 13 only) | All 1,917 incomplete tiles | Original 1,004 Natural Earth suspect tiles |
+| --- | ---: | ---: |
+| Missing native DEM pixels | 49,095,948 | 26,140,149 |
+| Missing pixels inside OSM land polygons | **23,879,764** | **23,838,837** |
+| Missing pixels outside OSM land (**unknown**, not ocean) | 25,216,184 | 2,301,312 |
+| Missing OSM-land pixels also inside IGAC departments | 5,865 | 5,865 |
+| Missing OSM-land pixels outside IGAC departments | 23,873,899 | 23,832,972 |
+| Missing OSM-land pixels also inside Natural Earth | 23,739,575 | 23,739,575 |
+| Missing OSM-land pixels not inside Natural Earth | **140,189** | **99,262** |
+| Missing inside IGAC but not OSM | 737 | 737 |
+| Tiles with missing native DEM inside OSM land | **1,008** | **1,003** |
+
+**Interpretation:** OSM identifies 1,008 z13 incomplete tiles with land-reference gaps, versus the previous 1,004 Natural Earth suspect tiles; 1,003 of the original 1,004 have an OSM land gap. These are land-versus-DEM reference results, NOT 23.9 million independent Colombian land pixels: the study rectangle includes neighboring countries.
+
+All **52** unselected public COGs were screened as advisory source candidates; **none** were promoted to the 137-source production manifest. Missing pixels outside OSM land remain unknown. No synthetic sea level or bathymetry was inserted and no MBTiles were released.
+
+**Next gate:** compare the 1,008 z13 OSM land-gap tiles and 52 COG candidates against a reviewed Colombian territorial land scope, retaining small offshore islands and excluding Quitasueño. Then test real native DEM recovery for the surviving candidates; a COG degree-cell overlap is not sufficient proof.

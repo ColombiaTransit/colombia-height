@@ -22,7 +22,9 @@ def serve(path, port, repo_root):
     repo_root = Path(repo_root).resolve()
     files = {
         "/": repo_root / "scripts" / "maplibre_coast_preview.html",
-        "/maplibre-gl.js": repo_root / "node_modules" / "maplibre-gl" / "dist" / "maplibre-gl.js",
+        "/maplibre-gl.mjs": repo_root / "node_modules" / "maplibre-gl" / "dist" / "maplibre-gl.mjs",
+        "/maplibre-gl-worker.mjs": repo_root / "node_modules" / "maplibre-gl" / "dist" / "maplibre-gl-worker.mjs",
+        "/maplibre-gl-shared.mjs": repo_root / "node_modules" / "maplibre-gl" / "dist" / "maplibre-gl-shared.mjs",
         "/maplibre-gl.css": repo_root / "node_modules" / "maplibre-gl" / "dist" / "maplibre-gl.css",
     }
 
@@ -56,7 +58,7 @@ def serve(path, port, repo_root):
             if candidate and candidate.is_file():
                 blob = candidate.read_bytes()
                 self.send_response(200)
-                self.send_header("Content-Type", mimetypes.guess_type(str(candidate))[0] or "text/html")
+                self.send_header("Content-Type", ("application/javascript" if candidate.suffix == ".mjs" else (mimetypes.guess_type(str(candidate))[0] or "text/html")))
                 self.send_header("Content-Length", str(len(blob)))
                 self.end_headers()
                 self.wfile.write(blob)

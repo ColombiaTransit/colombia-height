@@ -80,6 +80,8 @@ class TwoIslandStagingTests(unittest.TestCase):
         self.assertEqual(len(staged),139)
         self.assertEqual(len({r["name"] for r in staged}),139)
         self.assertEqual(len(original),137)
+        self.assertEqual([s["name"] for s in staged[:137]], [s["name"] for s in original])
+        self.assertEqual({s["name"] for s in staged[137:]}, set(ALLOWLIST))
         self.assertFalse(any(s["name"] in ALLOWLIST for s in original))
 
     def test_candidate_with_invalid_s3_size_rejected(self):

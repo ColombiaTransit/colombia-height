@@ -1,0 +1,16 @@
+{
+  "options": {
+    "paths": {
+      "root": "/data",
+      "mbtiles": "."
+    }
+  },
+  "styles": {},
+  "data": {
+    "colombia-terrain": {
+      "mbtiles": "colombia-terrain.mbtiles",
+      "tileSize": 256,
+      "sparse": false
+    }
+  }
+}

@@ -211,12 +211,12 @@ def render_chunk(plan_dir, chunk_id, manifest, land_clip, land_meta,
     if blocked:
         report = {**base, "status": "BLOCKED_mixed_coast",
                   "full_land_tiles_written": 0,
-                  "skipped_all_offland": statuses["skip_no_physical_OSM_Colombia_land"]}
+                  "skipped_all_offland": statuses.get("skip_no_physical_OSM_Colombia_land", 0)}
         atomic_json(report_path, report)
         raise RuntimeError(
             f"Chunk {chunk_id}: {len(blocked)} mixed coast/island tiles. "
             "No native sources fetched and no MBTiles emitted; see blocker report.")
-    if statuses["fully_OSM_Colombia_land"] == 0:
+    if statuses.get("fully_OSM_Colombia_land", 0) == 0:
         report = {**base, "status": "SKIPPED_no_Colombian_OSM_land",
                   "full_land_tiles_written": 0,
                   "skipped_all_offland": len(tiles)}
@@ -224,8 +224,10 @@ def render_chunk(plan_dir, chunk_id, manifest, land_clip, land_meta,
         return report
     # Native Copernicus download and warp is already implemented and tested
     # in the original generator. No replacement code here.
+    cache = Path(cache)
+    cache.mkdir(parents=True, exist_ok=True)
     result = write_inland_mbtiles(
-        mbtiles, rows, sources, Path(cache),
+        mbtiles, rows, sources, cache,
         (-84.0, -5.0, -66.0, 17.0), (min(t[0] for t in tiles), max(t[0] for t in tiles)))
     if (result["full_land_tiles_written"] != statuses["fully_OSM_Colombia_land"]
             or result.get("skipped_all_offland", 0)
@@ -286,6 +288,12 @@ def merge_verified_chunks(plan_dir, result_dir, target):
     if merged["tiles"] != actual:
         output.unlink(missing_ok=True)
         raise AssertionError("Merged native tile counts differ from verified reports")
+    with sqlite3.connect(output) as db:
+        db.execute("INSERT OR REPLACE INTO metadata(name,value) VALUES(?,?)",
+                   ("attribution", "Contains modified Copernicus DEM data; © OpenStreetMap contributors (ODbL 1.0)"))
+        db.execute("INSERT OR REPLACE INTO metadata(name,value) VALUES(?,?)",
+                   ("description", "Colombia inland OSM physical-land-only Terrain-RGB; mixed coast and low zoom pending, NOT a complete national release"))
+        db.commit()
     report = {"status": "MERGED_INLAND_ONLY_NOT_NATIONAL_RELEASE",
               "source_manifest_sha256": plan["source_manifest_sha256"],
               "tiles": actual, "chunks_checked": len(plan["chunks"]),

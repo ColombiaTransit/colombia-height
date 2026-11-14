@@ -1,0 +1,101 @@
+name: Real Country-Clipped Terrain-RGB Low-Zoom 0-3 — Reuse 140 COG Catalog
+
+on:
+  push:
+    paths: ['.github/workflows/real-lowzoom-native-pilot.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  real-lowzoom:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install existing DEM libraries (no new sources)
+        run: python -m pip install -r requirements-terrain.txt -r requirements-island-inventory.txt
+      - name: Reuse verified OSM country and 140-Copernicus source list
+        uses: actions/download-artifact@v4
+        with:
+          repository: ColombiaTransit/colombia-height
+          run-id: 43624636935
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          name: colombia-osm-terrain-pilot-inputs
+          path: output
+      - name: Verify runner actually has disk, not assume 14 GiB nor permanent 85 GiB
+        run: |
+          df -h .
+          python - <<'PY'
+          import shutil
+          free=shutil.disk_usage(".").free/1024**3
+          print(f"Actual free runner storage: {free:.2f}GiB")
+          if free<30:
+              raise RuntimeError("Need >=30GiB for one-time native all-source lowzoom integration; no false free-runner assumption")
+          PY
+      - name: Build immutable only z0–3 (low zoom not previously native-tested)
+        run: |
+          python scripts/consolidated_terrain_pipeline.py plan \
+            --manifest output/stage140/colombia_dem_manifest_tumaco_staging_140.csv \
+            --output-dir output/lowzoom-plan \
+            --minzoom 0 --maxzoom 3 --shards 32 --chunk-tiles 100
+      - name: Real native GLO-30 zoom 0–3 with country-clipped factual OSM masks
+        run: |
+          python scripts/consolidated_terrain_pipeline.py shard \
+            --plan-dir output/lowzoom-plan --shard-id 0 \
+            --manifest output/stage140/colombia_dem_manifest_tumaco_staging_140.csv \
+            --osm-land-clip output/osm-reference/osm-land-study.wkb.gz \
+            --osm-land-meta output/osm-reference/osm-land-study-metadata.json \
+            --osm-country-geojson output/osm-country/colombia-relation-120027.json \
+            --coast-render-only-sea-surface --render-flat-outside-colombia \
+            --start-free-gib 25 --reserve-free-gib 10 \
+            --output-dir output/lowzoom-native --cache output/lowzoom-native-cache
+      - name: Confirm genuine low-zoom native input, factual masks and decoding
+        run: |
+          PYTHONPATH=scripts python - <<'PY'
+          import json,sqlite3
+          from pathlib import Path
+          import numpy as np
+          from render_only_coast_rgb import COUNTRY_CLIP_MODE,decode_mask_png,decode_terrain_rgb
+          root=Path("output/lowzoom-native")
+          summary=json.loads((root/"shard-000.summary.json").read_text())
+          plan=json.loads(Path("output/lowzoom-plan/plan.json").read_text())
+          assert summary["complete"] is True
+          assert summary["total_candidate_tiles"]==plan["candidate_tiles"]
+          assert summary["coast_render_mode"]==COUNTRY_CLIP_MODE
+          count=0
+          for path in root.glob("chunk-*.mbtiles"):
+            with sqlite3.connect(path) as db:
+              meta=dict(db.execute("SELECT name,value FROM metadata"))
+              assert meta["coast_render_mode"]==COUNTRY_CLIP_MODE
+              assert meta["foreign_land_is_sea"]=="false"
+              for z,x,y,png,mask_png in db.execute(
+                  "SELECT t.zoom_level,t.tile_column,t.tile_row,t.tile_data,m.mask_png "
+                  "FROM tiles t JOIN osm_land_mask m USING(zoom_level,tile_column,tile_row)"):
+                  land=decode_mask_png(mask_png)
+                  dem=decode_terrain_rgb(png)
+                  assert land.any() and np.all(np.isfinite(dem[land]))
+                  assert np.all(dem[~land]==0)
+                  assert not np.any(dem==-10000)
+                  count+=1
+          assert count==summary["written_native_terrain_tiles"]>0
+          print("PASS true native country-clipped lowzoom tiles",count)
+          PY
+      - name: Keep only small real z0–3 output and ledger; never upload 5GB COGs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: colombia-real-140-source-lowzoom-z0-z3-OSM-country-pilot
+          path: |
+            output/lowzoom-plan/plan.json
+            output/lowzoom-native/chunk-*.report.json
+            output/lowzoom-native/shard-*.summary.json
+            output/lowzoom-native/chunk-*.mbtiles
+          retention-days: 7
+          if-no-files-found: warn

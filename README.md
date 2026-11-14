@@ -2,13 +2,39 @@
 
 Reproducible inventory and preparation of **Copernicus DEM GLO-30** elevation data for Colombia, intended for self-hosted terrain maps (e.g. TileServer GL / MapLibre).
 
-## Active development path (14 November 2026)
+## Active generator — 14 November 2026
 
-The current supported development entry point is the [consolidated OSM-land-only Terrain-RGB pipeline](docs/consolidated-terrain-pipeline.md), built from **existing** original source/OSM land validators, the original shard ownership and the validated MBTiles merger. The latest [offline consolidation regression #43626725409](https://github.com/ColombiaTransit/colombia-height/actions/runs/43626725409) succeeded (20 tests). The first [real inland OSM pilot using the reviewed 140-source manifest #43624636935](https://github.com/ColombiaTransit/colombia-height/actions/runs/43624636935) succeeded with 10 true native tiles.
+The [canonical national OSM Terrain-RGB generator](docs/consolidated-terrain-pipeline.md)
+now supports **zoom 0–13** with the existing 140-Copernicus-source staging
+inventory, the original OSMColombia physical-land masks, resumable 32-shard
+execution, disk preflights and fail-closed SQLite/OSM-mask merging.
 
-**Target runtime: TileServer GL.** The [real TileServer GL + MapLibre 6.8 compatibility test #43630855308](https://github.com/ColombiaTransit/colombia-height/actions/runs/43630855308) passed: all 26 actual Cartagena Terrain-RGB tiles retained exact decoded height values through the full TileServer GL Docker server, offland tiles return HTTP 204, and MapLibre 6.8 loaded 32 real PNGs with 3D terrain and zero DEM errors. Use the [checked-in TileServer GL deployment configuration and client source example](docs/tileserver-gl-terrain-integration.md). The source/original landmask distinction remains in SQLite; zero sea is visual only, NOT bathymetry or factual elevation.
+**Verified actual native work:** 10 inland tiles
+([#43624636935](https://github.com/ColombiaTransit/colombia-height/actions/runs/43624636935));
+26 real coastal tiles, including 17 mixed land/sea
+([#43628318643](https://github.com/ColombiaTransit/colombia-height/actions/runs/43628318643));
+7 genuine **low-zoom z0–3** tiles
+([#43635436079](https://github.com/ColombiaTransit/colombia-height/actions/runs/43635436079)).
+The raw MBTiles were served and decoded unchanged via
+[real TileServer GL + MapLibre 6.8 #43630855308](https://github.com/ColombiaTransit/colombia-height/actions/runs/43630855308).
 
-The new entry point uses z9–13 immutable chunk rosters. Its strict default still **fails closed** for mixed land/sea tiles, but the explicit **opt-in render-only sea surface** is now implemented and passed a [real Cartagena coastal pilot #43628318643](https://github.com/ColombiaTransit/colombia-height/actions/runs/43628318643): 26 genuine Terrain-RGB tiles including 17 mixed coasts, 1,142,998 real land height pixels and 560,938 strictly visual-only sea pixels. Factual OSM land masks are retained alongside PNGs in SQLite. The optional mode does not represent bathymetry or accept fake/missing land elevation. Nationwide publication remains blocked by actual MapLibre visual inspection, foreign-border special cases, z0–8 and full-output QA. Prior successful Medellín, coast, island, source-seam and land-gap research is historical verified evidence: **do not repeat those scans/pilots**. The underlying 137 original production COGs remain unchanged; 140 is still a separately verified staging source list.
+**Actual runner free space is much more generous than we first assumed:** the
+project measured **85–88 GB free on a 145 GB root disk** in real standard
+GitHub ubuntu-24.04 runs. GitHub's publicly documented standard specification
+is 14 GB, so jobs check live disk capacity and stop early if less is provided.
+
+**No nationwide MBTiles has been generated or published.** The explicit
+[manual DRAFT-only national build](.github/workflows/national-terrain-draft-build.yml)
+prepares immutable input once, processes 32 source-cached geographic shards
+and merges real land/mask MBTiles into split draft-release assets for
+TileServer GL. It does not rely on large short-lived Actions artifacts.
+See the [national storage estimate, exact land/border policy and build steps](docs/national-generator-z0-z13-storage-and-build.md).
+
+Sea pixels and physical foreign land beyond Colombia are two distinct
+**visual-only 0m backgrounds**, never real bathymetry or foreign measured
+elevation. Every positive Colombian land pixel requires real Copernicus height;
+factual OSM-land masks remain alongside Terrain-RGB in SQLite. All previous
+island, source-COG and national land-gap QA is reused; do not rerun that research.
 
 ## Historical baseline status (13 November 2026)
 

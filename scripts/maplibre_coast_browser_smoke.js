@@ -25,7 +25,10 @@ const out = process.env.MAPLIBRE_SMOKE_DIR || "output/maplibre-preview";
     if (r.url().includes("/tiles/") && r.status() === 200) pngs.push(r.url());
   });
   try {
-    await page.goto("http://127.0.0.1:8765/", { waitUntil: "load", timeout: 30000 });
+    const tileUrl=process.env.TERRAIN_TEST_TILES_URL || "";
+    const testUrl="http://127.0.0.1:8765/" +
+      (tileUrl ? "?tiles="+encodeURIComponent(tileUrl) : "");
+    await page.goto(testUrl, { waitUntil: "load", timeout: 30000 });
     console.log("Browser first load state:", JSON.stringify(await page.evaluate(() => ({
       maplibreVersion: window.maplibregl?.version || null,
       hasMap: !!window.__map,
@@ -44,6 +47,10 @@ const out = process.env.MAPLIBRE_SMOKE_DIR || "output/maplibre-preview";
       sourceReady: window.__terrainReady,
     }));
     data.loadedActualTerrainPNGTiles = pngs.length;
+    data.tileSource = tileUrl || "direct SQLite test HTTP server";
+    if(tileUrl && !pngs.some(url=>url.startsWith(tileUrl.split("/{z}")[0]))) {
+      throw new Error("No actual Terrain PNG tile returned by configured TileServer GL URL");
+    }
     data.javascriptErrors = problems;
     data.pngExamples = pngs.slice(0, 4);
     fs.writeFileSync(out + "/browser-smoke-result.json", JSON.stringify(data, null, 2) + "\n");

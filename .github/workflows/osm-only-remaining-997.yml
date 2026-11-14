@@ -1,0 +1,89 @@
+name: OSM-Only Final 997 Known Land Gaps Country Audit — Reuse Native/Coast Evidence
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/osm-only-remaining-997.yml'
+      - 'scripts/osm_only_remaining_997.py'
+      - 'tests/test_osm_only_remaining_997.py'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  only-previous-land:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install existing GIS dependencies, not native source inventory or DEM
+        run: python -m pip install -r requirements-terrain.txt -r requirements-island-inventory.txt
+      - name: Test all-old-tiles evidence validation and no sea assumption
+        run: python -m unittest discover -s tests -p 'test_osm_only_remaining_997.py' -v
+      - name: Reuse preverified original 1005 OSM land NoData XYZ roster
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ColombiaTransit/colombia-height
+          run-id: 43607959646
+          name: colombia-existing-1005-gaps-country-context-no-source-reruns
+          path: output/old-139
+      - name: Reuse precise 139-to-140 native Copernicus recovery without raster recomputation
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ColombiaTransit/colombia-height
+          run-id: 43609826904
+          name: colombia-tumaco-native-139-to-140-only-incremental-coverage
+          path: output/native-140
+      - name: Reuse previously completed OSM coastline and 27+68 tile analysis
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ColombiaTransit/colombia-height
+          run-id: 43611992754
+          name: colombia-osm-only-final-land-scope-without-native-reruns
+          path: output/new-68
+      - name: Query only OSM relation 120027 and classify all 997 existing OSM-positive source gaps, no native/elevation/OSM coastline scan
+        run: |
+          python scripts/osm_only_remaining_997.py \
+            --old-139-roster output/old-139/remaining-139-osm-land-z13-tiles.json \
+            --increment-140 output/native-140/tumaco-139-to-140-exact-increment.json \
+            --latest-68-scope output/new-68/osm-colombia-land-scope.json \
+            --output output/all-997-colombia-osm/remaining-997-osm-country-check.json
+      - name: Final data provenance and 23748406 original OSM-land samples fully accounted
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('output/all-997-colombia-osm/remaining-997-osm-country-check.json').read_text())
+          assert r['OSM_only_Colombia_country_relation_id']==120027
+          assert r['all_old_original_source_scope_tiles_with_OSM_land_missing']==997
+          assert r['OSM_positive_land_pixels_original_study_scope_total']==23748406
+          assert sum(r['tile_counts'].values())==997
+          assert sum(r['known_missing_OSM_land_pixels'].values())==23748406
+          assert r['previous_known_27_foreign_border_tiles_unchanged'] is True
+          assert r['previous_new_68_Tumaco_coastline_query_not_repeated'] is True
+          assert r['original_GLO30_COGs_downloaded']==0
+          assert r['original_global_OSM_land_polygons_downloaded']==0
+          assert r['no_137_139_140_national_DEM_rerun'] is True
+          assert r['sea_and_ocean_outside_project_land_only'] is True
+          assert r['no_bathymetry_or_synthetic_ocean_elevations'] is True
+          assert r['national_Terrain_RGB_publication_allowed'] is False
+          print('ALL 997 previously confirmed OSM-land tile groups:',r['tile_counts'])
+          print('All originally missing OSM-land pixels by OSM Colombia relation:',r['known_missing_OSM_land_pixels'])
+          print('Remaining tiles requiring precise OSM country mask:',r['tiles_touching_or_within_OSM_Colombia_relation'])
+          PY
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: colombia-all-997-original-OSM-land-gaps-colombia-country-relation-only
+          path: output/all-997-colombia-osm/remaining-997-osm-country-check.json
+          retention-days: 1
+          if-no-files-found: error

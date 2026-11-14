@@ -181,17 +181,17 @@ def render_chunk(plan_dir, chunk_id, manifest, land_clip, land_meta,
     plan, info, tiles = load_chunk(plan_dir, chunk_id)
     if sha256_file(manifest) != plan["source_manifest_sha256"]:
         raise ValueError("Source manifest changed after immutable plan creation")
-    sources = parse_manifest(manifest)
-    require_verified_staging(sources)
-    physical, meta = load_osm_coastline_land(land_clip, land_meta)
-    country = load_osm_country(country_json)
-    statuses, rows = prepare_plan(tiles, physical, country)
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     mbtiles = output_dir / f"chunk-{chunk_id}.mbtiles"
     report_path = output_dir / f"chunk-{chunk_id}.report.json"
     if report_path.exists() or mbtiles.exists():
         raise FileExistsError("Chunk already processed: do not overwrite successful/blocked evidence")
+    sources = parse_manifest(manifest)
+    require_verified_staging(sources)
+    physical, meta = load_osm_coastline_land(land_clip, land_meta)
+    country = load_osm_country(country_json)
+    statuses, rows = prepare_plan(tiles, physical, country)
     blocked = [{"zxy": list(row["tile"]), "land_pixels": row["land_pixels"]}
                for row in rows
                if row["status"] == "mixed_coastal_OSM_Colombia_land_and_offland"]

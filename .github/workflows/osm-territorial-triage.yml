@@ -1,0 +1,75 @@
+name: Triage OSM Colombia Territorial DEM Source Candidates
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/osm-territorial-triage.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install existing GIS and OSM quality assurance dependencies
+        run: python -m pip install -r requirements-terrain.txt -r requirements-island-inventory.txt
+      - name: Run complete offline regression suite including no-approval territory tests
+        run: python -m unittest discover -s tests -v
+      - name: Retrieve original audited OSM z13 evidence rather than redownloading worldwide OSM polygons
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ColombiaTransit/colombia-height
+          run-id: 43573144549
+          name: colombia-osm-national-land-coverage-evidence
+          path: output
+      - name: Cross-check all 52 omitted Copernicus COG cells against foreign borders, IGAC pixels and island studies
+        run: |
+          python scripts/osm_territorial_source_triage.py \
+            --osm-report output/osm-audit/osm-national-native-land-report.json \
+            --official-review data/official-igac-source-review-2026-11-13.json \
+            --island-probes data/colombia-island-probes.json \
+            --output output/osm-territorial-triage/source-scope-triage.json
+      - name: Reconcile full 52-source and 1917-tile study without promoting or excluding any source
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('output/osm-territorial-triage/source-scope-triage.json').read_text())
+          assert r['source_cog_candidates']==52
+          assert r['z13_incomplete_baseline_tiles']==1917
+          assert r['OSM_missing_land_tiles']==1008
+          assert len(r['sources'])==52
+          assert sum(r['sources_by_evidence_tier'].values())==52
+          assert sum(r['tiles_by_non_authoritative_reference_tier'].values())==1917
+          assert r['frozen_selected_COG_count']==137
+          assert r['new_selected_COGs']==0
+          assert r['quitasueno_explicitly_excluded'] is True
+          assert r['synthetic_ocean_heights_added']==0
+          assert r['national_publication_allowed'] is False
+          assert r['countrywide_exact_native_recovery_for_all_52_performed'] is False
+          assert all(s['source_approved_for_manifest'] is False for s in r['sources'])
+          assert all(s['territorial_land_authorized'] is False for s in r['sources'])
+          assert all(s['foreign_reference_contact_is_not_proof_of_foreign_pixel'] is True for s in r['sources'])
+          print('52 advisory COG source tiers:', r['sources_by_evidence_tier'])
+          print('1917 z13 tile tiers:', r['tiles_by_non_authoritative_reference_tier'])
+          print('Neighbor country ADM0 references:', list(r['foreign_country_references_loaded']))
+          print('Missing country references:', r['foreign_country_references_unavailable'])
+          print('NO additional source approved; NO synthetic elevations; NO release')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: colombia-osm-territorial-source-triage
+          path: output/osm-territorial-triage/source-scope-triage.json
+          retention-days: 1
+          if-no-files-found: error

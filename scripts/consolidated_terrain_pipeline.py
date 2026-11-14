@@ -418,6 +418,7 @@ def merge_verified_chunks(plan_dir, result_dir, target):
     result_dir = Path(result_dir)
     sources = []
     actual = 0
+    verified_osm_geometry_hashes=set()
     for chunk in plan["chunks"]:
         report_path = result_dir / f"chunk-{chunk['id']}.report.json"
         if not report_path.exists():
@@ -430,6 +431,12 @@ def merge_verified_chunks(plan_dir, result_dir, target):
                 or report.get("national_release_authorized") is not False
                 or report.get("blocked_coastal_tiles")):
             raise ValueError(f"Invalid or blocked chunk report: {chunk['id']}")
+        osm_hash=report.get("physical_OSM_sha256")
+        if not isinstance(osm_hash,str) or len(osm_hash)!=64:
+            raise ValueError(f"Missing original OSM geometry provenance in {chunk['id']}")
+        verified_osm_geometry_hashes.add(osm_hash)
+        if len(verified_osm_geometry_hashes)>1:
+            raise ValueError("Mixed native OSM coastline snapshots: refused nationwide merge")
         written = report.get("full_land_tiles_written", -1)
         mixed = report.get("mixed_coast_tiles_written", 0)
         skipped = report.get("skipped_all_offland", -1)
@@ -455,6 +462,10 @@ def merge_verified_chunks(plan_dir, result_dir, target):
         if sha256_file(path) != report.get("mbtiles_sha256"):
             raise ValueError("MBTiles file hash differs from native chunk report")
         with sqlite3.connect(f"file:{path.resolve()}?mode=ro", uri=True) as db:
+            native_mode_row=db.execute("SELECT value FROM metadata WHERE name='coast_render_mode'").fetchone()
+            native_mode=native_mode_row[0] if native_mode_row else "strict_inland"
+            if native_mode!=render_mode:
+                raise ValueError("Native MBTiles mode does not match signed shard completion ledger")
             if db.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
                 raise ValueError("Chunk MBTiles failed SQLite validation")
             if db.execute("SELECT count(*) FROM tiles").fetchone()[0] != written+mixed:
@@ -470,6 +481,8 @@ def merge_verified_chunks(plan_dir, result_dir, target):
                     raise ValueError("Extra OSM land mask with no Terrain-RGB tile")
         sources.append(path)
         actual += written+mixed
+    if len(verified_osm_geometry_hashes)!=1:
+        raise ValueError("Expected exactly one original OSM geometry hash across all national shards")
     if len(sources) < 2:
         raise RuntimeError("Existing fail-closed merger requires at least two nonempty input shards")
     output = Path(target)
@@ -530,6 +543,7 @@ def merge_verified_chunks(plan_dir, result_dir, target):
         report={"status":"MERGED_RENDER_ONLY_NOT_NATIONAL_RELEASE" if input_modes in ({COAST_MODE},{COUNTRY_CLIP_MODE}) else "MERGED_INLAND_ONLY_NOT_NATIONAL_RELEASE",
                 "coast_render_mode":next(iter(input_modes)),
                 "source_manifest_sha256":plan["source_manifest_sha256"],
+                "physical_OSM_sha256":next(iter(verified_osm_geometry_hashes)),
                 "tiles":actual,"chunks_checked":len(plan["chunks"]),
                 "merged_mbtiles":str(output),"merged_sha256":sha256_file(tmp),
                 "national_release_authorized":False,

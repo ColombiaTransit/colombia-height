@@ -31,7 +31,7 @@ jobs:
           path: output/cartagena-render
       - name: Prepare real MapLibre GL JS + headless software WebGL test
         run: |
-          npm install --no-save maplibre-gl@5 playwright@1
+          npm install --no-save maplibre-gl@6.8.0 playwright@1
           npx playwright install --with-deps chromium
       - name: Serve real already-verified terrain RGB from read-only SQLite
         run: |

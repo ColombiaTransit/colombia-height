@@ -1,0 +1,413 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-14",
+  "repo": "ColombiaTransit/colombia-height",
+  "scope": "Known exact OSM-native gaps within frozen previous 139 source footprint only; new 140-only pixels have unknown land/water membership",
+  "reused_previous_country_triage_run": 43607959646,
+  "reused_previous_139_national_coverage_run": 43605294875,
+  "incremental_Tumaco_native_run": 43609826904,
+  "source_140_stage_run": 43609451961,
+  "original_139_scope_OSM_land_NoData": {
+    "missing_pixels_before_Tumaco": 23878663,
+    "pixels_repaired_in_Tumaco": 130257,
+    "pixels_remaining_after_Tumaco": 23748406,
+    "tiles_with_missing_land_before": 1005,
+    "tiles_with_missing_land_after": 997,
+    "within_foreign_whole_tile_non_authoritative_reference": {
+      "tiles": 970,
+      "missing_OSM_land_pixels": 23353784
+    },
+    "within_partial_country_or_border_reference": {
+      "tiles": 25,
+      "missing_OSM_land_pixels": 371336
+    },
+    "without_country_ADM0_land_reference": {
+      "tiles": 2,
+      "missing_OSM_land_pixels": 23286
+    },
+    "country_scope_classification_is_whole_tile_only_not_pixelwise": true,
+    "not_all_referenced_foreign_land_proven_jurisdiction": true
+  },
+  "initial_139_ambiguous_country_tiles": 32,
+  "initial_139_ambiguous_missing_OSM_land_pixels": 459388,
+  "exact_old_139_ambiguous_tiles_now_fully_repaired_by_140": [
+    {
+      "z": 13,
+      "x": 2298,
+      "y": 4058,
+      "original_139_missing_OSM_land_pixels": 6816,
+      "remaining_140_native_OSM_land_NoData_pixels": 0,
+      "historical_IGAC_joint_missing": 5686
+    },
+    {
+      "z": 13,
+      "x": 2298,
+      "y": 4059,
+      "original_139_missing_OSM_land_pixels": 215,
+      "remaining_140_native_OSM_land_NoData_pixels": 0,
+      "historical_IGAC_joint_missing": 179
+    },
+    {
+      "z": 13,
+      "x": 2298,
+      "y": 4068,
+      "original_139_missing_OSM_land_pixels": 20224,
+      "remaining_140_native_OSM_land_NoData_pixels": 0,
+      "historical_IGAC_joint_missing": 0
+    },
+    {
+      "z": 13,
+      "x": 2298,
+      "y": 4069,
+      "original_139_missing_OSM_land_pixels": 20224,
+      "remaining_140_native_OSM_land_NoData_pixels": 0,
+      "historical_IGAC_joint_missing": 0
+    },
+    {
+      "z": 13,
+      "x": 2298,
+      "y": 4067,
+      "original_139_missing_OSM_land_pixels": 17287,
+      "remaining_140_native_OSM_land_NoData_pixels": 0,
+      "historical_IGAC_joint_missing": 0
+    }
+  ],
+  "remaining_140_ambiguous_country_tiles": 27,
+  "remaining_140_ambiguous_missing_OSM_land_pixels": 394622,
+  "remaining_known_IGAC_department_and_OSM_land_missing_pixels": 0,
+  "remaining_140_ambiguous_tile_priorities": [
+    {
+      "z": 13,
+      "x": 2580,
+      "y": 4073,
+      "missing_native_pixels_inside_OSM_land": 49920,
+      "historical_IGAC_joint_missing_native_pixels": 0,
+      "country_ADM0_reference_contacts": [
+        "BRA",
+        "VEN"
+      ],
+      "investigation_priority": "P3_partial_foreign_or_border_context_unverified",
+      "not_legal_country_pixel_assignment": true
+    },
+    {
+      "z": 13,
+      "x": 2465,
+      "y": 3844,
+      "missing_native_pixels_inside_OSM_land": 30447,
+      "historical_IGAC_joint_missing_native_pixels": 0,
+      "country_ADM0_reference_contacts": [
+        "VEN"
+      ],
+      "investigation_priority": "P3_partial_foreign_or_border_context_unverified",
+      "not_legal_country_pixel_assignment": true
+    },
+    {
+      "z": 13,
+      "x": 2474,
+      "y": 3844,
+      "missing_native_pixels_inside_OSM_land": 29345,
+      "historical_IGAC_joint_missing_native_pixels": 0,
+      "country_ADM0_reference_contacts": [
+        "VEN"
+      ],
+      "investigation_priority": "P3_partial_foreign_or_border_context_unverified",
+      "not_legal_country_pixel_assignment": true
+    },
+    {
+      "z": 13,
+      "x": 2457,
+      "y": 3878,
+      "missing_native_pixels_inside_OSM_land": 26088,
+      "historical_IGAC_joint_missing_native_pixels": 0,
+      "country_ADM0_reference_contacts": [
+        "VEN"
+      ],
+      "investigation_priority": "P3_partial_foreign_or_border_context_unverified",
+      "not_legal_country_pixel_assignment": true
+    },
+    {
+      "z": 13,
+      "x": 2457,
+      "y": 3876,
+      "missing_native_pixels_inside_OSM_land": 24588,
+      "historical_IGAC_joint_missing_native_pixels": 0,
+      "country_ADM0_reference_contacts": [
+        "VEN"
+      ],
+      "investigation_priority": "P3_partial_foreign_or_border_context_unverified",
+      "not_legal_country_pixel_assignment": true
+    },
+    {
+      "z": 13,
+      "x": 2480,
+      "y": 4195,
+      "missing_native_pixels_inside_OSM_land": 23040,
+      "historical_IGAC_joint_missing_native_pixels": 0,
+      "country_ADM0_reference_contacts": [
+        "BRA",
+        "PER"
+      ],
+      "investigation_priority": "P3_partial_foreign_or_border_context_unverified",
+      "not_legal_country_pixel_assignment": true
+    },
+    {
+      "z": 13,
+      "x": 2466,
+      "y": 3844,
+      "missing_native_pixels_inside_OSM_land": 22973,
+      "historical_IGAC_joint_missing_native_pixels": 0,
+      "country_ADM0_reference_contacts": [
+        "VEN"
+      ],
+      "investigation_priority": "P3_partial_foreign_or_border_context_unverified",
+      "not_legal_country_pixel_assignment": true
+    },
+    {
+      "z": 13,
+      "x": 2325,
+      "y": 3890,
+      "missing_native_pixels_inside_OSM_land": 22622,
+      "historical_IGAC_joint_missing_native_pixels": 0,
+      "country_ADM0_reference_contacts": [
+        "PAN"
+      ],
+      "investigation_priority": "P3_partial_foreign_or_border_context_unverified",
+      "not_legal_country_pixel_assignment": true
+    },
+    {
+      "z": 13,
+      "x": 2467,
+      "y": 3844,
+      "missing_native_pixels_inside_OSM_land": 22576,
+      "historical_IGAC_joint_missing_native_pixels": 0,
+      "country_ADM0_reference_contacts": [],
+      "investigation_priority": "P2_no_country_reference_contact",
+      "not_legal_country_pixel_assignment": true
+    },
+    {
+      "z": 13,
+      "x": 2480,
+      "y": 3841,
+      "missing_native_pixels_inside_OSM_land": 21275,
+      "historical_IGAC_joint_missing_native_pixels": 0,
+      "country_ADM0_reference_contacts": [
+        "VEN"
+      ],
+      "investigation_priority": "P3_partial_foreign_or_border_context_unverified",
+      "not_legal_country_pixel_assignment": true
+    },
+    {
+      "z": 13,
+      "x": 2463,
+      "y": 3844,
+      "missing_native_pixels_inside_OSM_land": 19061,
+      "historical_IGAC_joint_missing_native_pixels": 0,
+      "country_ADM0_reference_contacts": [
+        "VEN"
+      ],
+      "investigation_priority": "P3_partial_foreign_or_border_context_unverified",
+      "not_legal_country_pixel_assignment": true
+    },
+    {
+      "z": 13,
+      "x": 2457,
+      "y": 3865,
+      "missing_native_pixels_inside_OSM_land": 18154,
+      "historical_IGAC_joint_missing_native_pixels": 0,
+      "country_ADM0_reference_contacts": [
+        "VEN"
+      ],
+      "investigation_priority": "P3_partial_foreign_or_border_context_unverified",
+      "not_legal_country_pixel_assignment": true
+    },
+    {
+      "z": 13,
+      "x": 2380,
+      "y": 4118,
+      "missing_native_pixels_inside_OSM_land": 16128,
+      "historical_IGAC_joint_missing_native_pixels": 0,
+      "country_ADM0_reference_contacts": [
+        "ECU",
+        "PER"
+      ],
+      "investigation_priority": "P3_partial_foreign_or_border_context_unverified",
+      "not_legal_country_pixel_assignment": true
+    },
+    {
+      "z": 13,
+      "x": 2457,
+      "y": 3877,
+      "missing_native_pixels_inside_OSM_land": 13986,
+      "historical_IGAC_joint_missing_native_pixels": 0,
+      "country_ADM0_reference_contacts": [
+        "VEN"
+      ],
+      "investigation_priority": "P3_partial_foreign_or_border_context_unverified",
+      "not_legal_country_pixel_assignment": true
+    },
+    {
+      "z": 13,
+      "x": 2473,
+      "y": 3844,
+      "missing_native_pixels_inside_OSM_land": 12692,
+      "historical_IGAC_joint_missing_native_pixels": 0,
+      "country_ADM0_reference_contacts": [
+        "VEN"
+      ],
+      "investigation_priority": "P3_partial_foreign_or_border_context_unverified",
+      "not_legal_country_pixel_assignment": true
+    },
+    {
+      "z": 13,
+      "x": 2326,
+      "y": 3890,
+      "missing_native_pixels_inside_OSM_land": 8602,
+      "historical_IGAC_joint_missing_native_pixels": 0,
+      "country_ADM0_reference_contacts": [
+        "PAN"
+      ],
+      "investigation_priority": "P3_partial_foreign_or_border_context_unverified",
+      "not_legal_country_pixel_assignment": true
+    },
+    {
+      "z": 13,
+      "x": 2457,
+      "y": 3879,
+      "missing_native_pixels_inside_OSM_land": 6797,
+      "historical_IGAC_joint_missing_native_pixels": 0,
+      "country_ADM0_reference_contacts": [
+        "VEN"
+      ],
+      "investigation_priority": "P3_partial_foreign_or_border_context_unverified",
+      "not_legal_country_pixel_assignment": true
+    },
+    {
+      "z": 13,
+      "x": 2470,
+      "y": 3844,
+      "missing_native_pixels_inside_OSM_land": 6592,
+      "historical_IGAC_joint_missing_native_pixels": 0,
+      "country_ADM0_reference_contacts": [
+        "VEN"
+      ],
+      "investigation_priority": "P3_partial_foreign_or_border_context_unverified",
+      "not_legal_country_pixel_assignment": true
+    },
+    {
+      "z": 13,
+      "x": 2321,
+      "y": 3907,
+      "missing_native_pixels_inside_OSM_land": 4096,
+      "historical_IGAC_joint_missing_native_pixels": 0,
+      "country_ADM0_reference_contacts": [
+        "PAN"
+      ],
+      "investigation_priority": "P3_partial_foreign_or_border_context_unverified",
+      "not_legal_country_pixel_assignment": true
+    },
+    {
+      "z": 13,
+      "x": 2321,
+      "y": 3908,
+      "missing_native_pixels_inside_OSM_land": 4096,
+      "historical_IGAC_joint_missing_native_pixels": 0,
+      "country_ADM0_reference_contacts": [
+        "PAN"
+      ],
+      "investigation_priority": "P3_partial_foreign_or_border_context_unverified",
+      "not_legal_country_pixel_assignment": true
+    },
+    {
+      "z": 13,
+      "x": 2457,
+      "y": 3875,
+      "missing_native_pixels_inside_OSM_land": 3228,
+      "historical_IGAC_joint_missing_native_pixels": 0,
+      "country_ADM0_reference_contacts": [
+        "VEN"
+      ],
+      "investigation_priority": "P3_partial_foreign_or_border_context_unverified",
+      "not_legal_country_pixel_assignment": true
+    },
+    {
+      "z": 13,
+      "x": 2464,
+      "y": 3844,
+      "missing_native_pixels_inside_OSM_land": 2934,
+      "historical_IGAC_joint_missing_native_pixels": 0,
+      "country_ADM0_reference_contacts": [
+        "VEN"
+      ],
+      "investigation_priority": "P3_partial_foreign_or_border_context_unverified",
+      "not_legal_country_pixel_assignment": true
+    },
+    {
+      "z": 13,
+      "x": 2471,
+      "y": 3844,
+      "missing_native_pixels_inside_OSM_land": 2622,
+      "historical_IGAC_joint_missing_native_pixels": 0,
+      "country_ADM0_reference_contacts": [
+        "VEN"
+      ],
+      "investigation_priority": "P3_partial_foreign_or_border_context_unverified",
+      "not_legal_country_pixel_assignment": true
+    },
+    {
+      "z": 13,
+      "x": 2457,
+      "y": 3866,
+      "missing_native_pixels_inside_OSM_land": 989,
+      "historical_IGAC_joint_missing_native_pixels": 0,
+      "country_ADM0_reference_contacts": [
+        "VEN"
+      ],
+      "investigation_priority": "P3_partial_foreign_or_border_context_unverified",
+      "not_legal_country_pixel_assignment": true
+    },
+    {
+      "z": 13,
+      "x": 2468,
+      "y": 3844,
+      "missing_native_pixels_inside_OSM_land": 710,
+      "historical_IGAC_joint_missing_native_pixels": 0,
+      "country_ADM0_reference_contacts": [],
+      "investigation_priority": "P2_no_country_reference_contact",
+      "not_legal_country_pixel_assignment": true
+    },
+    {
+      "z": 13,
+      "x": 2472,
+      "y": 3844,
+      "missing_native_pixels_inside_OSM_land": 588,
+      "historical_IGAC_joint_missing_native_pixels": 0,
+      "country_ADM0_reference_contacts": [
+        "VEN"
+      ],
+      "investigation_priority": "P3_partial_foreign_or_border_context_unverified",
+      "not_legal_country_pixel_assignment": true
+    },
+    {
+      "z": 13,
+      "x": 2469,
+      "y": 3844,
+      "missing_native_pixels_inside_OSM_land": 473,
+      "historical_IGAC_joint_missing_native_pixels": 0,
+      "country_ADM0_reference_contacts": [
+        "VEN"
+      ],
+      "investigation_priority": "P3_partial_foreign_or_border_context_unverified",
+      "not_legal_country_pixel_assignment": true
+    }
+  ],
+  "new_140_only_candidate_z13_tiles": 552,
+  "new_140_only_tiles_with_native_NoData": 68,
+  "new_140_only_native_NoData_pixels_geographical_classification_UNKNOWN": 2688103,
+  "new_140_only_OSM_reference_geometry_not_recomputed": true,
+  "do_not_add_new_140_only_unknown_pixels_to_original_139_referenced_country_totals": true,
+  "remaining_original_52_candidates_outside_staging": 49,
+  "no_original_COG_elevations_changed": true,
+  "no_ocean_NODATA_assumed_0m": true,
+  "quitasueno_excluded": true,
+  "national_publication_allowed": false
+}

@@ -220,6 +220,11 @@ def run(manifest, osm_path, osm_metadata, island_report, probes_path, output):
             summary["all_new_heights_native_Copernicus"] = True
             summary["source_permanently_selected"] = False
             site_summaries[site] = summary
+            # Both temporary source records occupy index 137. Never reuse
+            # one island's cached COG handle for the next island's source.
+            temporary_dataset = opened.pop(137, None)
+            if temporary_dataset is not None:
+                temporary_dataset.close()
     finally:
         for src in opened.values():
             src.close()

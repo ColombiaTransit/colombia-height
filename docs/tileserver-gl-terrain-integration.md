@@ -106,11 +106,7 @@ a deliberate data-semantic safety distinction, not a format incompatibility.
   #43629735031](https://github.com/ColombiaTransit/colombia-height/actions/runs/43629735031):
   successful on the original Cartagena file using the local test server, with
   no DEM/JavaScript errors. This is a **browser decoder** test.
-- [Real TileServer GL service compatibility workflow](../.github/workflows/verify-tileserver-gl-terrain.yml):
-  tests the **actual full TileServer GL Docker image**, its /data API, every
-  tile's exact decoded pixel heights, missing-tile semantics and then real
-  MapLibre 6.8 running through the TileServer GL endpoint. Reuses the existing
-  Cartagena artifact; does not re-download OSM/Copernicus or regenerate DEM.
+- [Real TileServer GL + MapLibre 6.8 integration run #43630855308](https://github.com/ColombiaTransit/colombia-height/actions/runs/43630855308): **SUCCESS.** The complete full TileServer GL Docker server served **all 26** genuine Cartagena Terrain-RGB tiles with **pixel-identical decoded heights** (HTTP gzip transport did not change pixels); an offland tile correctly returned **HTTP 204**. Chromium / MapLibre GL JS 6.8 enabled native 3D terrain and requested **32 actual HTTP 200 PNGs from TileServer GL `/data/colombia-terrain/…`** with **zero DEM errors and zero JS errors**. [Screenshot and JSON log artifact #14128370862](https://github.com/ColombiaTransit/colombia-height/actions/runs/43630855308/artifacts/14128370862), limited to seven-day retention. The automated test is now manual-only and reuses existing data; it must not trigger a new Copernicus/OSM scan.
 
-The project must not publish a nationwide or coast-complete MBTiles until
+The **server compatibility of option 1 is verified** against actual TileServer GL and MapLibre GL JS 6.8. The project must not publish a nationwide or coast-complete MBTiles until
 all-zoom, all-islands/borders, full-source and map styling checks pass.

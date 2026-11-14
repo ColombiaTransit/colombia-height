@@ -93,6 +93,26 @@ class OSMLandReferenceTests(unittest.TestCase):
         self.assertEqual(row["missing_osm_land_outside_igac_department"],1)
         self.assertEqual(row["missing_osm_land_outside_igac_and_natural_earth"],0)
 
+    def test_unavailable_igac_is_null_not_fake_zero_or_official_exclusion(self):
+        valid=np.ones((256,256),bool)
+        osm=np.zeros((256,256),bool)
+        ne=np.zeros((256,256),bool)
+        gb=np.zeros((256,256),bool)
+        valid[1,1]=False
+        osm[1,1]=True
+        row=exact_categories(valid,osm,None,ne,gb)
+        self.assertIsNone(row["missing_osm_land_and_igac_department"])
+        self.assertIsNone(row["missing_igac_but_not_osm"])
+        self.assertFalse(row["igac_mask_available"])
+        self.assertEqual(row["missing_inside_osm_land"],1)
+        name="Copernicus_DSM_COG_10_N01_00_W080_00_DEM"
+        lon=np.full((256,256),-79.5)
+        lat=np.full((256,256),1.5)
+        hints=cell_pixel_counts(~valid,osm,None,lon,lat,[name])
+        self.assertIsNone(hints[name]["osm_land_and_igac_missing_pixel_cell_hits"])
+        self.assertFalse(hints[name]["igac_mask_available"])
+        self.assertTrue(classify_candidate(hints[name]).startswith("B_"))
+
     def test_candidate_cog_only_counts_exact_missing_native_pixels(self):
         name="Copernicus_DSM_COG_10_N01_00_W080_00_DEM"
         lon=np.full((256,256),-79.5)

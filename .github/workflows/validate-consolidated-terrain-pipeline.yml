@@ -1,0 +1,40 @@
+name: Consolidated Colombia Terrain Pipeline — Offline Regression Only
+
+on:
+  push:
+    paths:
+      - 'scripts/consolidated_terrain_pipeline.py'
+      - 'tests/test_consolidated_terrain_pipeline.py'
+      - '.github/workflows/validate-consolidated-terrain-pipeline.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install existing dependencies only (no Copernicus or OSM downloads)
+        run: python -m pip install -r requirements-terrain.txt -r requirements-island-inventory.txt
+      - name: Verify original renderer native test without network
+        run: python -m unittest discover -s tests -p 'test_generate_osm_land_only_terrain.py' -v
+      - name: Verify original deterministic national planner and duplicate-safe merger
+        run: |
+          python -m unittest discover -s tests -p 'test_national_tile_plan.py' -v
+          python -m unittest discover -s tests -p 'test_merge_regions.py' -v
+      - name: Test consolidated plan, coast-blocker ledger, offland skip and safe native merge
+        run: python -m unittest discover -s tests -p 'test_consolidated_terrain_pipeline.py' -v
+      - name: Check consolidated CLI without downloading original source images
+        run: |
+          python scripts/consolidated_terrain_pipeline.py --help
+          python scripts/consolidated_terrain_pipeline.py plan --help
+          python scripts/consolidated_terrain_pipeline.py render --help
+          python scripts/consolidated_terrain_pipeline.py merge --help
+          echo 'PASS: no national raster scan, no OSM redownload, no publishing.'

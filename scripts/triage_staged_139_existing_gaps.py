@@ -192,7 +192,7 @@ def run(osm_file,stage_file,output):
         -t["historical_missing_OSM_and_official_IGAC_department_pixels"],
         -t["missing_native_DEM_inside_OSM_land_pixels"]))
     out=Path(output)
-    out.parent.mkdir(parents=True,exist_ok=True)
+    out.mkdir(parents=True,exist_ok=True)
     result={
         "status":"staged_139_genuine_source_gaps_reused_geographic_triad_without_recomputing_DEM",
         "created_utc":datetime.now(timezone.utc).isoformat(),

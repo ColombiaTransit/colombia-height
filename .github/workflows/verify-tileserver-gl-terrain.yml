@@ -51,7 +51,7 @@ jobs:
           done
           curl --fail --show-error http://127.0.0.1:8080/health
           docker logs --tail 60 colombia-terrain-tileserver
-      - name: Check actual TileServer GL TileJSON, byte-identical PNG, 204 offland and no source mutation
+      - name: Check actual TileServer GL TileJSON, lossless RGB elevation, 204 offland and no source mutation
         run: |
           python -m pip install -r requirements-terrain.txt -r requirements-island-inventory.txt
           python scripts/check_tileservergl_terrain.py \

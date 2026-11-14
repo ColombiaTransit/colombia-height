@@ -68,5 +68,31 @@
   ],
   "quitasueno_excluded": true,
   "national_mapbox_terrain_rgb_release_allowed": false,
-  "osm_attribution": "© OpenStreetMap contributors — ODbL 1.0 https://www.openstreetmap.org/copyright"
+  "osm_attribution": "© OpenStreetMap contributors — ODbL 1.0 https://www.openstreetmap.org/copyright",
+  "additional_single_tile_review_2026_11_14": {
+    "audit_run": 43614061108,
+    "tile_zxy": [
+      13,
+      2297,
+      4050
+    ],
+    "native_NoData_pixel_centers": 31232,
+    "OSM_Standard_ocean_background_pixels": 62967,
+    "nonwater_style_decorative_pixels": 2569,
+    "review": "Remaining pixels visually verified as Colombia administrative border stroke and text, NOT coastline/land; prior OSM bounded query found 0 coastlines and 0 island polygons intersecting the tile",
+    "positive_mapped_OSM_physical_land_evidence_in_tile": 0,
+    "OSM_render_not_exact_vector_land_mask": true,
+    "source_selection_issue_closed_at_z13": true,
+    "report": "data/final-tumaco-offshore-13-2297-4050-osm-review-2026-11-14.json",
+    "note": "Any actual land masks must be computed from assembled OSMCoastline polygons in the generator; do not assign the 31232 NoData pixels ocean elevations."
+  },
+  "generator_initial_stage": {
+    "code": "scripts/generate_osm_land_only_terrain.py",
+    "test_run": 43614898356,
+    "tests_passed": true,
+    "current_capability": "validated OSM-only FULL-LAND inward single/tile MBTiles; mixed coastal tiles fail-closed pending MapLibre-compatible renderer semantics",
+    "code_doc": "docs/osm-land-only-terrain-generator.md",
+    "national_MBtiles_published": false,
+    "existing_140_source_precedence_preserved": true
+  }
 }

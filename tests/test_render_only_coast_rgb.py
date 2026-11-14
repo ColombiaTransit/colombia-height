@@ -68,6 +68,23 @@ class RenderOnlyCoastTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "foreign/out-of-country"):
             encode_coast_render_only(self.height, self.land, physical)
 
+    def test_explicit_foreign_outscope_is_flat_not_sea_and_land_stays_native(self):
+        from render_only_coast_rgb import COUNTRY_CLIP_MODE
+        foreign=self.physical.copy()
+        foreign[8,200]=True
+        rgb,mask,qa=encode_coast_render_only(
+            self.height,self.land,foreign,allow_offscope_flat=True)
+        self.assertEqual(qa["policy"],COUNTRY_CLIP_MODE)
+        self.assertEqual(qa["foreign_land_pixels_encoded_as_sea"],0)
+        self.assertEqual(qa["render_only_offscope_foreign_land_pixels"],1)
+        self.assertEqual(qa["render_only_OSM_sea_surface_pixels"],32767)
+        self.assertEqual(qa["render_only_total_background_pixels"],32768)
+        np.testing.assert_array_equal(decode_mask_png(mask),self.land)
+        pixels=decode_terrain_rgb(rgb)
+        np.testing.assert_allclose(pixels[self.land],self.height[self.land],atol=0.051)
+        self.assertEqual(pixels[8,200],0.0)
+        self.assertTrue((pixels[~self.land]==0).all())
+
     def test_refuse_zero_land_and_bad_mask_or_overflow(self):
         with self.assertRaisesRegex(ValueError, "zero-only sea"):
             encode_coast_render_only(

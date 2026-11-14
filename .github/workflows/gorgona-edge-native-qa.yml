@@ -1,0 +1,82 @@
+name: Native COG QA Gorgona Edge Source N03 W079
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/gorgona-edge-native-qa.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install original DEM and OSM study dependencies
+        run: python -m pip install -r requirements-terrain.txt -r requirements-island-inventory.txt
+      - name: Run complete offline tests including immutable heights and mathematically strict recovery bounds
+        run: python -m unittest discover -s tests -v
+      - name: Restore original exact native OSM z13 study without a global OSM redownload
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ColombiaTransit/colombia-height
+          run-id: 43573144549
+          name: colombia-osm-national-land-coverage-evidence
+          path: output
+      - name: Regenerate verified original 137 native COG manifest
+        run: |
+          python scripts/inventory.py --output output --workers 8
+          python scripts/extend_inventory.py --inventory output --islands data/colombia-island-probes.json
+          python - <<'PY'
+          import csv
+          with open('output/colombia_dem_manifest_extended.csv',newline='') as f:
+              r=list(csv.DictReader(f))
+          assert len(r)==137 and all(x['status']=='ok' for x in r)
+          assert 'Copernicus_DSM_COG_10_N03_00_W079_00_DEM' not in {x['name'] for x in r}
+          print('Original 137-source DEM manifest still unchanged')
+          PY
+      - name: Test exact native DEM recovery of omitted N03 W079 across frozen 47 z13 candidates
+        run: |
+          python scripts/gorgona_edge_native_cog_qa.py \
+            --manifest output/colombia_dem_manifest_extended.csv \
+            --osm output/osm-audit/osm-national-native-land-report.json \
+            --output output/gorgona-source-qa
+      - name: Enforce strict geographic, DEM and publication safeguards
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('output/gorgona-source-qa/gorgona-n03-w079-native-recovery.json').read_text())
+          s=r['native_pixel_and_OSM_land_recovery_bound_totals']
+          assert r['original_selected_source_count']==137
+          assert r['target_candidate_z13_tile_count']==47
+          assert s['prior_OSM_land_missing_inside_degree_cell']==747
+          assert s['recovered_OSM_land_pixels_lower_bound']<=s['recovered_OSM_land_pixels_upper_bound']<=747
+          assert r['every_original_valid_elevation_preserved'] is True
+          assert r['existing_native_elevation_max_difference_m']<=.001
+          assert r['Gorgona_study_proximity_is_not_territorial_jurisdiction'] is True
+          assert r['COG_source_added_to_production_manifest'] is False
+          assert r['synthetic_heights_added']==0
+          assert r['national_publication_allowed'] is False
+          print('Native DEM recovered:',s['native_pixels_recovered'])
+          print('Proven recovered OSM-land pixels lower/upper:',
+                s['recovered_OSM_land_pixels_lower_bound'],
+                s['recovered_OSM_land_pixels_upper_bound'])
+          print('No source promotion, no synthetic ocean, no release')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: colombia-gorgona-edge-native-cog-qa
+          path: output/gorgona-source-qa/gorgona-n03-w079-native-recovery.json
+          retention-days: 1
+          if-no-files-found: error

@@ -1,0 +1,124 @@
+name: Countrywide 139 Island-Staged DEM and Exact OSM Land Coverage Delta
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/national-staged-139-osm-qa.yml'
+      - 'scripts/national_staged_139_audit.py'
+      - 'tests/test_national_staged_139_audit.py'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  national-139:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install original GLO-30 DEM and OSM polygon scientific dependencies
+        run: python -m pip install -r requirements-terrain.txt -r requirements-island-inventory.txt
+      - name: Run all offline regression tests including incremental 139-source QA
+        run: python -m unittest discover -s tests -v
+      - name: Restore complete original 137-source nationwide 32-shard DEM and land evidence
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ColombiaTransit/colombia-height
+          run-id: 43490555676
+          pattern: colombia-land-coverage-shard-*
+          merge-multiple: true
+          path: output/national-land
+      - name: Restore frozen original nationwide OSM/native z13 source pixel audit
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ColombiaTransit/colombia-height
+          run-id: 43573144549
+          name: colombia-osm-national-land-coverage-evidence
+          path: output/osm-baseline
+      - name: Reconstruct original 137-source register and separately stage the exactly two approved island COGs
+        run: |
+          python scripts/inventory.py --output output --workers 8
+          python scripts/extend_inventory.py --inventory output --islands data/colombia-island-probes.json
+          python scripts/stage_island_sources.py \
+            --manifest output/colombia_dem_manifest_extended.csv \
+            --review data/staged-island-source-selection-2026-11-14.json \
+            --output output/island-stage
+          python - <<'PY'
+          import csv
+          from pathlib import Path
+          with (Path('output')/'colombia_dem_manifest_extended.csv').open(newline='') as f:
+              old=list(csv.DictReader(f))
+          with (Path('output')/'island-stage'/'colombia_dem_manifest_island_staging_139.csv').open(newline='') as f:
+              new=list(csv.DictReader(f))
+          assert len(old)==137 and len(new)==139
+          assert [x['name'] for x in old]==[x['name'] for x in new[:137]]
+          assert all(x['status']=='ok' for x in new)
+          print('Original COG heights retain priority; two extra island sources appended')
+          PY
+      - name: Reconstruct OSMCoastline land pixel masks without claiming legal land or ocean
+        run: |
+          df -h .
+          python scripts/osm_land_reference.py --output output/osm-reference
+          df -h .
+      - name: Compare every 139-source z0-z13 candidate using frozen national tiles and exactly recomputed affected source masks
+        run: |
+          python scripts/national_staged_139_audit.py \
+            --base-land output/national-land \
+            --base-osm output/osm-baseline/osm-audit/osm-national-native-land-report.json \
+            --base-manifest output/colombia_dem_manifest_extended.csv \
+            --staged-manifest output/island-stage/colombia_dem_manifest_island_staging_139.csv \
+            --selection data/staged-island-source-selection-2026-11-14.json \
+            --osm output/osm-reference/osm-land-study.wkb.gz \
+            --osm-meta output/osm-reference/osm-land-study-metadata.json \
+            --output output/national-staged139
+      - name: Reconcile countrywide all-zoom coverage, z13 OSM gaps, source priority, uncertainty and release lock
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('output/national-staged139/national-staged-139-dem-and-osm-coverage.json')
+          r=json.loads(p.read_text())
+          assert r['original_selected_COG_count']==137
+          assert r['staged_selected_COG_count']==139
+          assert r['original_national_candidate_tile_count']==96751
+          assert len(r['additional_original_Copernicus_COGs'])==2
+          assert r['source_precedence']=='all original 137 COGs first, then the two staged island COGs'
+          assert r['staged_national_candidate_tile_count']==sum(r['candidate_tile_counts_by_zoom'].values())
+          assert r['staged_national_candidate_tile_count']==sum(r['staged_all_zoom_native_DEM_coverage_counts'].values())
+          assert r['new_staged_candidate_tiles_total']>=0
+          assert r['recomputed_tiles_across_all_zooms']>=r['new_staged_candidate_tiles_total']
+          assert r['OSM_is_NOT_official_colombia_territory'] is True
+          assert r['outside_OSM_land_is_NOT_verified_ocean'] is True
+          assert r['no_original_valid_elevations_changed'] is True
+          assert r['no_synthetic_bathymetry_or_ocean_heights'] is True
+          assert r['quitasueno_explicitly_excluded_from_source_approval'] is True
+          assert r['national_Terrain_RGB_publication_allowed'] is False
+          assert r['candidates_remaining_outside_staging']==50
+          land=r['new_139_source_OSM_land_z13_comparison']
+          old=land['original_137_z13_missing_native_pixel_totals']
+          new=land['staged_139_z13_missing_native_pixel_totals']
+          assert old['native_missing_dem_pixels']==49095948
+          assert old['missing_inside_osm_land']==23879764
+          assert old['missing_outside_osm_land_UNKNOWN_not_confirmed_ocean']==25216184
+          assert new['native_missing_dem_pixels']==new['missing_inside_osm_land']+new['missing_outside_osm_land_UNKNOWN_not_confirmed_ocean']
+          print('137 -> 139 complete original+extra COG scope:',r['original_national_candidate_tile_count'],r['staged_national_candidate_tile_count'])
+          print('New z13 OSM missing-on-land:',new['missing_inside_osm_land'])
+          print('New z13 missing outside OSM land (UNKNOWN, not ocean):',new['missing_outside_osm_land_UNKNOWN_not_confirmed_ocean'])
+          print('New z13 tiles with missing native DEM:',land['staged_139_incomplete_z13_tiles'])
+          print('NO artificial ocean heights. NO new source beyond two reviewed islands. NO national release.')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: colombia-countrywide-139-cog-dem-and-osm-land-coverage-evidence
+          path: output/national-staged139/national-staged-139-dem-and-osm-coverage.json
+          retention-days: 1
+          if-no-files-found: error

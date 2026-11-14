@@ -66,6 +66,40 @@ if [[ "$STAGE" == build-shard ]]; then
     --pattern 'colombia-terrain-inputs.tar.gz'
   tar -xzf output/download/colombia-terrain-plan.tar.gz -C output
   tar -xzf output/download/colombia-terrain-inputs.tar.gz -C output
+  # Empty candidate shards are valid: no COG fetch, no output archive.
+  # Only shards present in the immutable plan belong in the final merge.
+  if ! python - "$SHARD_ID" <<'PY'
+import json,sys
+from pathlib import Path
+plan=json.loads(Path("output/plan/plan.json").read_text())
+shard=int(sys.argv[1])
+if plan.get("shards")!=32 or plan.get("zoom_range")!=[0,13]:
+    raise ValueError("Unexpected or invalid immutable country plan")
+if not any(int(chunk["shard"])==shard for chunk in plan["chunks"]):
+    print(f"SKIPPED_EMPTY_SHARD {shard}: zero candidate tiles; no DEM processing required")
+    sys.exit(10)
+print(f"PLANNED_NONEMPTY_SHARD {shard}")
+PY
+  then
+    rc=$?
+    # The Python check's explicitly handled 'empty' status is 10.
+    # In a shell 'if ! cmd' the exit status is inverted; never mask other
+    # parser/plan errors: handled below via a separate status marker.
+    if test -f output/plan/plan.json; then
+      python - "$SHARD_ID" <<'PY'
+import json,sys
+from pathlib import Path
+plan=json.loads(Path("output/plan/plan.json").read_text())
+shard=int(sys.argv[1])
+if not any(int(chunk["shard"])==shard for chunk in plan["chunks"]):
+    print(f"Empty shard {shard} correctly finished without any new release asset.")
+    sys.exit(0)
+raise RuntimeError("Nonempty planned shard failed validation: refuse to skip")
+PY
+      exit 0
+    fi
+    exit 1
+  fi
   python scripts/consolidated_terrain_pipeline.py shard \
     --plan-dir output/plan --shard-id "$SHARD_ID" \
     --manifest output/stage140/colombia_dem_manifest_tumaco_staging_140.csv \

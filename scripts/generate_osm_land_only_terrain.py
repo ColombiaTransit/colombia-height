@@ -10,14 +10,15 @@ The exact 256x256 Web Mercator center mask is:
   OSMCoastline assembled LAND polygons INTERSECT OSM COL administrative area.
 Only these pixels require valid native GLO-30 heights.
 
-RELEASE GATE: standard MapLibre raster-dem decodes RGB and IGNORES PNG alpha.
-A mixed land/sea RGB tile cannot safely represent off-land NoData. Thus this
-initial generator REFUSES COAST tiles outright, rather than encoding them as
-fake -10000 m trenches or ocean elevations. It can generate verified fully
-inland MBTiles; do NOT call this a complete national generator.
-
-To finish coastal tiles, an explicitly reviewed renderer/offland convention
-must be implemented separately and integration-tested in MapLibre/TileServer.
+DEFAULT RELEASE GATE: standard MapLibre raster-dem decodes RGB and ignores
+PNG alpha; strict mode still REFUSES mixed coasts. With the explicit
+--coast-render-only-sea-surface opt-in, actual OSM sea pixels get a 0 m
+*visualization surface* (NEVER bathymetry), and the factual pixel-accurate
+Colombian OSM land mask is stored in the same MBTiles SQLite table
+'osm_land_mask'. Native Copernicus heights are unchanged and required at
+every true Colombian land pixel. Foreign physical land is NOT called sea.
+The opt-in mode passed a real Cartagena coastal encoding pilot, but still
+requires human browser MapLibre/TileServer visual QA before national release.
 """
 import argparse
 import hashlib
@@ -298,7 +299,9 @@ def run(source_manifest,land_clip,land_meta,country_json,output,
         output,rows,sources,cache,bbox,(minzoom,maxzoom),
         coast_render_surface=coast_render_surface)
     evidence={
-        "status":"OSM_land_only_INLAND_ONLY_native_GLO30_MBtiles_pilot_not_national_release",
+        "status":("OSM_land_only_coast_RENDER_ONLY_NATIVE_GLO30_pilot_not_national_release"
+                  if coast_render_surface else
+                  "OSM_land_only_INLAND_ONLY_native_GLO30_MBtiles_pilot_not_national_release"),
         "created_utc":datetime.now(timezone.utc).isoformat(),
         "source_manifest":str(source_manifest),
         "original_COG_count":137,"staging_COG_count":140,

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "notes": "Approximate sampling centers, not authoritative territorial polygons or certified land positions. Some banks/cays may be submerged or mapped differently. Verify coordinates and jurisdiction with official Colombian IGAC data before final publication. Quitasueño Bank is deliberately excluded from this project's scope by maintainer decision; do not use the inventory as a sovereignty determination.",
+  "notes": "Approximate sampling centers, not authoritative territorial polygons or certified land positions. Some banks/cays may be submerged or mapped differently. Verify coordinates and jurisdiction with official Colombian IGAC data before final publication. Quitasueño Bank is deliberately excluded from this project's scope by maintainer decision; do not use the inventory as a sovereignty determination. Santa Catalina and Gorgonilla probe coordinates corrected 2026-11-14 after comparison with named-place sources and a direct closed OSM coastline polygon containment QA (run 43595662069); original trial points and source URLs retained in data/island-probe-candidate-corrections-2026-11-14.json. This verifies physical land polygon point membership only, not legal sovereignty or a complete island DEM publication gate.",
   "locations": [
     {
       "id": "san_andres",
@@ -19,9 +19,12 @@
     {
       "id": "santa_catalina",
       "name": "Santa Catalina",
-      "lon": -81.375,
-      "lat": 13.38,
-      "kind": "island"
+      "lon": -81.37467,
+      "lat": 13.38798,
+      "kind": "island",
+      "probe_source": "https://www.openstreetmap.org/way/20391863",
+      "point_in_closed_OSM_coastline_checked_run": 43595662069,
+      "not_official_territorial_boundary": true
     },
     {
       "id": "malpelo",
@@ -40,9 +43,12 @@
     {
       "id": "gorgonilla",
       "name": "Gorgonilla",
-      "lon": -78.19,
-      "lat": 2.93,
-      "kind": "island"
+      "lon": -78.21193,
+      "lat": 2.93935,
+      "kind": "island",
+      "probe_source": "https://mapcarta.com/19709632",
+      "point_in_closed_OSM_coastline_checked_run": 43595662069,
+      "not_official_territorial_boundary": true
     },
     {
       "id": "isla_fuerte",

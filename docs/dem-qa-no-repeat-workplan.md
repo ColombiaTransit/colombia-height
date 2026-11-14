@@ -35,6 +35,20 @@ The exact limited worklist, including all 32 XYZ keys, appears in [the permanent
 3. **No more source-list rescan:** Source inventory is **137 original production / 140 separate staging** (Malpelo, Gorgona, Tumaco). Recalculate only genuinely changed source-local grids after an independently approved new COG, never the national 32-shard old baseline, without a material new input or detected defect. The other 49 omitted COGs remain advisory.
 4. **Publication policy:** decide how true ocean/NoData pixels are represented *without inventing 0m elevations*, validate the source and Terrain-RGB encoding semantics, coast/islands and all zoom-level national output before generating any national MBTiles release.
 
+## Final source-land scope closure — OSM-only (14 November 2026)
+
+The Colombia land-scope decision is now based **only on OpenStreetMap**: OSM natural=coastline derived physical land intersected with [OSM Colombia relation 120027](https://www.openstreetmap.org/relation/120027). Sea depths, ocean bathymetry, territorial sea, and native missing DEM samples *outside OSM land* are not project terrain-coverage obligations.
+
+**Completed without repeating the national DEM:**
+
+- [#43611992754](https://github.com/ColombiaTransit/colombia-height/actions/runs/43611992754) checked the previous 27 border tiles and all 68 new Tumaco tiles using OSM Colombia's relation and one **small regional** OSM coastline query; did not download any native COG or the worldwide OSM land archive.
+- [#43612505074](https://github.com/ColombiaTransit/colombia-height/actions/runs/43612505074) extended the new OSM-country classification to **all 997** still incomplete z13 tiles with previously proven OSM-land NoData. **Every one of these 997 tiles**, representing 23,748,406 source-missing OSM-land pixel centers, is wholly disjoint from the OSM Colombia relation.
+- The 140-only Tumaco source range had **67 tiles** with 2,656,871 native missing pixels outside the OSM Colombia relation. The **one partial Colombia admin-scope tile, z13/2297/4050**, contained 31,232 missing native pixels but **no OSM coastline or mapped island polygon intersected it** in the bounded OSM query; physical OSM land NoData is not demonstrated there. It is not a verified sea depth.
+
+**Current confirmed Colombian OSM physical-land DEM gaps at z13: zero in the studied source-gap set.** One offshore tile remains without an exact OSM land pixel mask, but it is not a confirmed land gap. The old 27-case geographic shortlist and the foreign ADM0 references are now historical triage only, **not active country source blockers**.
+
+**New required work is output engineering, not source/land research:** implement OSM land-only terrain masking, skip tiles with no Colombian OSM land, reject missing real native elevation **on** land, and verify mixed coast transparency/NoData handling in MapLibre/TileServer GL at all zooms before national MBTiles generation. [Full OSM-only result](osm-land-only-final-qa-2026-11-14.md); [strict source-mask policy](../scripts/osm_land_only_dem_policy.py).
+
 ## Source ownership and safeguards
 
 - The approved production inventory remains **137 original native Copernicus COGs**; the separately reviewed **139** and latest **140** staging inventories are studies only.

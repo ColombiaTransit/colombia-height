@@ -55,6 +55,14 @@ def run(mbtiles,base_url):
             raise AssertionError(f"TileServer GL did not serve PNG Terrain-RGB at {z}/{x}/{xyz_y}")
         # TileServer GL is permitted to re-encode lossless PNG compression;
         # the native 256x256 RGB elevation samples MUST remain identical.
+        # Some HTTP servers may transfer-encode a byte-identical PNG.
+        # The transport must be diagnosed, not confused with lost DEM data.
+        if not actual_png.startswith(b"\\x89PNG\\r\\n\\x1a\\n"):
+            raise AssertionError(
+                f"TileServer GL replied image/png with non-PNG bytes at {z}/{x}/{xyz_y}: "
+                f"first24={actual_png[:24].hex()} content-encoding={h.get('content-encoding')} "
+                f"length={len(actual_png)} status={returned_status} "
+                f"source-prefix={expected_png[:8].hex()}")
         actual_heights=decode_terrain_rgb(actual_png)
         if actual_heights.shape!=heights.shape or not (actual_heights==heights).all():
             import numpy as np

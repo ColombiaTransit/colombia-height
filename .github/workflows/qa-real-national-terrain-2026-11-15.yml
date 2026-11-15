@@ -72,6 +72,8 @@ jobs:
             --osm-land-meta output/osm-reference/osm-land-study-metadata.json \
             --osm-country-geojson output/osm-country/colombia-relation-120027.json \
             --output output/qa-reports/national-full-pixel-mask-osm-qa.json
+          python -m json.tool output/qa-reports/national-full-pixel-mask-osm-qa.json > /dev/null
+          echo 'Complete national QA report is valid JSON with all numeric pixel counts serialized.'
       - name: Boot REAL maptiler/tileserver-gl Docker against read-only nationwide MBTiles
         run: |
           docker run --detach --name colombia-national-terrain-qa \

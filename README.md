@@ -1,51 +1,65 @@
-# Colombia Height
+# Colombia Height — ColombiaTerrain Terrain-RGB
 
-Reproducible inventory and preparation of **Copernicus DEM GLO-30** elevation data for Colombia, intended for self-hosted terrain maps (e.g. TileServer GL / MapLibre).
+**Stable countrywide release: `v1.0.0` (15 November 2026).**
 
-## Active generator — 14 November 2026
+Validated national **Copernicus DEM GLO-30 + OSM Colombian land**
+in **Mapbox Terrain-RGB 256 px PNG / SQLite MBTiles**, zoom **0–13**.
+Built for **TileServer GL** and **MapLibre GL JS**.
 
-The [canonical national OSM Terrain-RGB generator](docs/consolidated-terrain-pipeline.md)
-now supports **zoom 0–13** with the existing 140-Copernicus-source staging
-inventory, the original OSMColombia physical-land masks, resumable 32-shard
-execution, disk preflights and fail-closed SQLite/OSM-mask merging.
+### Permanent links for other projects
 
-**Verified actual native work:** 10 inland tiles
-([#43624636935](https://github.com/ColombiaTransit/colombia-height/actions/runs/43624636935));
-26 real coastal tiles, including 17 mixed land/sea
-([#43628318643](https://github.com/ColombiaTransit/colombia-height/actions/runs/43628318643));
-7 genuine **low-zoom z0–3** tiles
-([#43635436079](https://github.com/ColombiaTransit/colombia-height/actions/runs/43635436079)).
-The raw MBTiles were served and decoded unchanged via
-[real TileServer GL + MapLibre 6.8 #43630855308](https://github.com/ColombiaTransit/colombia-height/actions/runs/43630855308).
+- **Exact pinned version:** [v1.0.0 release](https://github.com/ColombiaTransit/colombia-height/releases/tag/v1.0.0)
+- **Machine-readable exact version:** [v1.0.0 Terrain-RGB manifest](https://github.com/ColombiaTransit/colombia-height/releases/download/v1.0.0/colombia-terrain.manifest.json)
+- **Stable moving pointer:** [latest Terrain-RGB manifest](https://github.com/ColombiaTransit/colombia-height/releases/latest/download/colombia-terrain.manifest.json)
+- **Latest stable release:** [GitHub Releases/latest](https://github.com/ColombiaTransit/colombia-height/releases/latest)
+- [Versioned release notes and install commands](release/RELEASE_NOTES.md) · [Data attribution and license](release/DATA_LICENSE.md)
 
-**Actual runner free space is much more generous than we first assumed:** the
-project measured **85–88 GB free on a 145 GB root disk** in real standard
-GitHub ubuntu-24.04 runs. GitHub's publicly documented standard specification
-is 14 GB, so jobs check live disk capacity and stop early if less is provided.
+```bash
+# Fetch the exact version or use --tag latest to follow newer approved releases.
+python3 scripts/install_terrain_release.py --tag v1.0.0 \
+  --output /srv/colombia-terrain/colombia-terrain.mbtiles
+```
 
-**No nationwide MBTiles has been generated or published.** The explicit
-[manual DRAFT-only national build](.github/workflows/national-terrain-draft-build.yml)
-prepares immutable input once, processes 32 source-cached geographic shards
-and merges real land/mask MBTiles into split draft-release assets for
-TileServer GL. It does not rely on large short-lived Actions artifacts.
-See the [national storage estimate, exact land/border policy and build steps](docs/national-generator-z0-z13-storage-and-build.md).
+The installer only needs Python 3. It downloads and verifies **three GitHub
+Release assets** (the 4.16 GiB MBTiles exceeds the GitHub 2 GiB single-asset
+limit), checks each part and the final complete SHA-256, and installs
+atomically without a second full-size download directory.
 
-Sea pixels and physical foreign land beyond Colombia are two distinct
-**visual-only 0m backgrounds**, never real bathymetry or foreign measured
-elevation. Every positive Colombian land pixel requires real Copernicus height;
-factual OSM-land masks remain alongside Terrain-RGB in SQLite. All previous
-island, source-COG and national land-gap QA is reused; do not rerun that research.
+**Genuine national quality approval:** 66,607 Terrain-RGB tiles and matching
+factual OSM masks; all 14 zoom levels; 71 native PNG grids served pixel-exact
+by real TileServer GL; 7/7 nationwide MapLibre 3D browser scenes passed.
+The lowest -239.1 m land pixel was independently traced to the original
+Copernicus GLO-30 source at a deep mine, not a generator defect.
+The intentionally flat background outside Colombian OSM land is approved
+for 3D visualization only, **not bathymetry nor a factual foreign DEM**.
+See [national QA evidence](docs/national-terrain-QA-2026-11-15.md).
+
+Once self-hosted, TileServer GL serves
+`/data/colombia-terrain/{z}/{x}/{y}.png` and
+`/data/colombia-terrain.json`; GitHub itself offers DOWNLOAD URLs rather
+than an on-demand raster tile service.
+See [TileServer GL integration](docs/tileserver-gl-terrain-integration.md).
+
+### Generator provenance
+
+The [countrywide OSM 140-source generator](docs/consolidated-terrain-pipeline.md)
+was run once across 32 candidate shards (26 nonempty), with 409 immutable
+chunks, all native OSM/mask and checksum gates. Its successful existing
+output was promoted to the public version without re-running Copernicus
+downloads or region generation.
+
+---
 
 ## Historical baseline status (13 November 2026)
 
-**Research and validation — not published**. The selected source inventory is
+**Historical research state before the 15 November 2026 public v1.0.0 release.** The selected source inventory is
 137 Copernicus GLO-30 COGs (~5.184 GiB). A completed national native-pixel
 coverage scan of 96,751 z0–13 candidate tiles found **92,973 fully covered**
 and **3,778 partially covered**. All 32 geographic shards reconciled with
 unique XYZ IDs: [successful run #43435820259](https://github.com/ColombiaTransit/colombia-height/actions/runs/43435820259).
 
 Regional, two-COG and four-COG pilot seam validation succeeded, but
-**countrywide terrain generation and publication are not authorized**.
+**countrywide publication had not yet been authorized at that historical checkpoint**.
 DEM coverage does not imply Colombian land jurisdiction; missing DEM values
 must not be replaced with 0 m or artificial -10000 m bathymetry.
 
@@ -77,8 +91,9 @@ automatic source expansions are permitted. Data source attribution:
 ## Source and attribution
 
 - Elevation: [Copernicus DEM GLO-30 Public](https://registry.opendata.aws/copernicus-dem/), AWS bucket `copernicus-dem-30m`. See the source licence and attribution conditions before redistributing derivatives.
-- Country boundaries: [geoBoundaries gbOpen COL ADM0](https://www.geoboundaries.org/), subject to the licence and attribution specified in the API metadata.
-- Geographic coverage is based on the selected ADM0 geometry, including islands only if present in that boundary dataset. Country polygon coverage and DEM coverage must be checked separately.
+- Released country footprint: OpenStreetMap Colombia relation R120027, intersected with OSMCoastline physical land polygons; © OpenStreetMap contributors, ODbL 1.0.
+- geoBoundaries/Natural Earth/IGAC were **historical comparative references only**, not the published final land clip.
+- The final license obligations for modified Copernicus GLO-30 and OSM-derived masks are documented at [release/DATA_LICENSE.md](release/DATA_LICENSE.md).
 
 ## Run the inventory
 
@@ -98,13 +113,13 @@ python scripts/inventory.py --output output/
 
 The script does **not** download GeoTIFF content. The full dataset download and terrain RGB conversion will be designed after examining the inventory and available runner disk space.
 
-## Validation stages
+## Historical validation stages (since completed)
 
 1. Source COG inventory and island probes — completed for the selected 137 COGs.
 2. Small/medium region Terrain-RGB and seam pilots — passed for tested areas.
 3. National native-DEM pixel coverage registry — completed, 96,751 candidates.
-4. Reference land/shoreline and island-gap classification — in progress.
-5. Confirm official land/island scope, missing-land policy, systematic edge QA.
-6. Only after quality gates: generate, validate and consider publishing national Terrain-RGB MBTiles.
+4. Reference land/shoreline and island-gap classification — completed for national v1.0.0.
+5. Confirm country-only OSM land/island scope, missing-land policy and systematic edge QA — completed.
+6. National z0–13 Terrain-RGB MBTiles generated, validated and released as v1.0.0.
 
 Keep generated GeoTIFF, MBTiles, and release assets outside git.

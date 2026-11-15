@@ -1,0 +1,155 @@
+name: National Terrain QA Recovery — Reuse Passed Pixel and HTTP, Browser Only
+
+# Previous full national QA run 43688658311 passed ALL pixel+mask and
+# REAL TileServer GL HTTP tests. MapLibre produced real tiles at all seven
+# locations but its QA script falsely assumed an exported ESM .version.
+# Reuse the passed reports; DO NOT rescan ~100k tiles / do not rebuild DEM.
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/recover-national-maplibre-qa-2026-11-15.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: colombia-terrain-original-draft-maplibre-2026-11-15-recovery
+  cancel-in-progress: false
+
+jobs:
+  browser-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
+    env:
+      GH_TOKEN: ${{ github.token }}
+      DRAFT_TAG: colombia-terrain-draft-2026-11-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Recheck the previously failed ESM MapLibre runtime-version contract before 4GiB data download
+        run: |
+          node --check scripts/maplibre_national_browser_qa.js
+          grep -Fq 'installedMaplibreVersion' scripts/maplibre_national_browser_qa.js
+          grep -Fq 'browserReportedMaplibreVersion' scripts/maplibre_national_browser_qa.js
+          python - <<'PY'
+          import shutil
+          free=shutil.disk_usage(".").free/1024**3
+          print("Available runner disk GiB:",round(free,2))
+          assert free>=25
+          PY
+      - name: Reuse QA results of the full country OSM mask and REAL TileServer GL HTTP grids
+        uses: actions/download-artifact@v4
+        with:
+          repository: ColombiaTransit/colombia-height
+          run-id: 43688658311
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          name: colombia-actual-countrywide-terrain-tile-server-maplibre-quality-report
+          path: output/reused-qa
+      - name: Confirm two previous PASSED reports and retain their independent evidence; no re-analysis of 100k tiles
+        run: |
+          mkdir -p output/qa-reports/browser
+          python - <<'PY'
+          from pathlib import Path
+          import json,shutil
+          root=Path("output/reused-qa")
+          pairs=[
+            ("national-full-pixel-mask-osm-qa.json","PASS_full_product_structural_pixels_and_OSM_samples"),
+            ("national-real-tileserver-gl-qa.json","PASS_REAL_TILESERVER_GL_NATIONAL_PNG_IDENTICAL"),
+          ]
+          for filename,status in pairs:
+            paths=list(root.rglob(filename))
+            if len(paths)!=1: raise RuntimeError(f"Expected exactly 1 original QA report {filename}, got {paths}")
+            report=json.loads(paths[0].read_text())
+            if report.get("status")!=status or report.get("national_release_authorized") is not False:
+              raise AssertionError(f"Original real QA didn't pass {filename}: {report.get('status')}")
+            print(f"VERIFIED PRIOR QA {filename}: {status} (original unchanged)")
+            shutil.copy2(paths[0],Path("output/qa-reports")/filename)
+      - name: Reassemble ONLY immutable original 4.16GiB MBTiles from draft Release, check exact SHA256
+        run: |
+          set -euo pipefail
+          test "$(gh release view "$DRAFT_TAG" --json isDraft --jq .isDraft)" = true
+          mkdir -p output/original-parts output/qa-data
+          gh release download "$DRAFT_TAG" --dir output/original-parts --pattern 'colombia-terrain.mbtiles.part-*'
+          gh release download "$DRAFT_TAG" --dir output/original-parts --pattern 'colombia-terrain.mbtiles.sha256'
+          test "$(find output/original-parts -name 'colombia-terrain.mbtiles.part-*' -type f | wc -l)" -eq 3
+          cat output/original-parts/colombia-terrain.mbtiles.part-{000,001,002} >output/qa-data/colombia-terrain.mbtiles
+          (cd output/qa-data && sha256sum --check ../original-parts/colombia-terrain.mbtiles.sha256)
+          cp deploy/tileserver-gl/config.json output/qa-data/config.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          prior=json.loads(Path("output/qa-reports/national-full-pixel-mask-osm-qa.json").read_text())
+          server=json.loads(Path("output/qa-reports/national-real-tileserver-gl-qa.json").read_text())
+          expected=Path("output/original-parts/colombia-terrain.mbtiles.sha256").read_text().split()[0]
+          assert prior["input_mbtiles_sha256"]==server["source_sha256"]==expected
+          assert prior["native_tiles_checked"]==prior["decoded_native_Terrain_RGB_PNGs"]==prior["factual_OSM_mask_PNGs"]
+          assert len(prior["tiles_by_zoom"])==14
+          assert server["tile_grids_identical"]>=14
+          print("REUSED PASSED 14-zoom original OSM pixel QA and TileServer GL QA; SHA256 identical")
+          PY
+      - name: Boot actual TileServer GL Docker against immutable original MBTiles
+        run: |
+          docker run --detach --name colombia-national-browser-only \
+            -p 8080:8080 -v "$PWD/output/qa-data:/data:ro" \
+            maptiler/tileserver-gl:latest --config /data/config.json
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8080/health >/dev/null; then break; fi
+            sleep 2
+          done
+          curl -fsS http://127.0.0.1:8080/health
+      - name: Real MapLibre 6.8 Chromium screenshots in Andes, Caribbean, Pacific, island, Amazon and nationwide view
+        run: |
+          npm install --no-save maplibre-gl@6.8.0 playwright@1
+          node - <<'JS'
+          const fs=require('fs');
+          const v=JSON.parse(fs.readFileSync('node_modules/maplibre-gl/package.json','utf8')).version;
+          console.log('Actual installed MapLibre version:',v);
+          if (!/^6\.8\./.test(v)) throw Error('Unexpected MapLibre version');
+          JS
+          npx playwright install --with-deps chromium
+          python scripts/serve_existing_terrain_mbtiles.py \
+            --mbtiles output/qa-data/colombia-terrain.mbtiles \
+            --repo-root . --port 8765 --national-preview \
+            >/tmp/colombia-national-maplibre-browser-only.log 2>&1 &
+          for i in $(seq 1 35); do
+            if curl -fsS http://127.0.0.1:8765/ >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:8765/ >/dev/null
+          TERRAIN_TEST_TILES_URL='http://127.0.0.1:8080/data/colombia-terrain/{z}/{x}/{y}.png' \
+            MAPLIBRE_NATIONAL_QA_DIR=output/qa-reports/browser \
+            node scripts/maplibre_national_browser_qa.js
+          (cd output/qa-data && sha256sum --check ../original-parts/colombia-terrain.mbtiles.sha256)
+      - name: Save all three independently successful national QA reports to existing UNPUBLISHED draft, never publish automatically
+        if: success()
+        run: |
+          test "$(gh release view "$DRAFT_TAG" --json isDraft --jq .isDraft)" = true
+          cp output/qa-reports/browser/maplibre-national-results.json \
+            output/qa-reports/national-maplibre-browser-qa.json
+          gh release upload "$DRAFT_TAG" \
+            output/qa-reports/national-full-pixel-mask-osm-qa.json \
+            output/qa-reports/national-real-tileserver-gl-qa.json \
+            output/qa-reports/national-maplibre-browser-qa.json
+          echo 'Original nationwide land+OSM, TileServer GL and real MapLibre QA reports now saved in UNPUBLISHED draft.'
+      - name: Retain national report and real visual screenshot evidence, no DEM or COG downloads
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: colombia-original-national-terrain-qa-verified-browser-only
+          path: |
+            output/qa-reports/*.json
+            output/qa-reports/browser/*.png
+            output/qa-reports/browser/*.json
+          retention-days: 7
+          if-no-files-found: warn
+      - name: Original TileServer GL logs
+        if: always()
+        run: docker logs --tail 80 colombia-national-browser-only 2>/dev/null || true

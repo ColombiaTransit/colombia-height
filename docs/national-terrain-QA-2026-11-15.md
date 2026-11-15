@@ -93,6 +93,27 @@ parts. Seven real browser screenshots are available as [successful job
 artifact #14151544544](https://github.com/ColombiaTransit/colombia-height/actions/runs/43689989955/artifacts/14151544544)
 (retention is temporary).
 
+## Final quality closure decision (15 November 2026)
+
+Both previously open items are now **closed**:
+
+1. Colombia-only OSM / Geofabrik footprint and flat, *non-bathymetric* 0m
+   out-of-country background: **accepted by project owner, no blocker**.
+2. Negative -239.1m source value: **reproduced from original native Copernicus
+   file, independently verified OSM land, and geospatially explained by
+   Pribbenow deep open-pit coal mining**. No data mutation, no generator fix
+   and no country-wide reprocessing needed.
+
+**Final QA disposition: TECHNICALLY APPROVED FOR NATIONAL MAPLIBRE / TILESERVER
+GL TERRAIN USE.** The existing draft is internally validated across all
+66,607 factual land tiles, mask provenance, 0–13 TileServer GL HTTP outputs,
+and seven national MapLibre 3D scenes.
+
+**Publication control** is distinct from technical quality: the current
+GitHub draft remains unpublished and `national_release_authorized=false`
+until explicit release publishing is performed. Do not mistake the fact
+that mining operations can descend below sea level for bogus sea/bathymetry.
+
 ## Important release semantics and visual reservations
 
 1. This is a **Colombia-only 3D visual product**. Inside the audited physical
@@ -108,11 +129,39 @@ artifact #14151544544](https://github.com/ColombiaTransit/colombia-height/action
    2026 the project owner explicitly accepted this display limitation as
    **not a blocker**. Do not re-open the border-shape/source-selection research
    and do not silently classify out-of-scope physical land as bathymetry.
-3. The **-239.1 m** observed minimum genuine-land pixel warrants a targeted
-   independent geolocation/source sanity check if the dataset will be used
-   for altitude analytics. Automated QA cannot identify its cause by minimum
-   alone. No new COG download is authorized or needed to inspect its XYZ
-   tile coordinate in the already-built MBTiles.
+3. **ACCEPTED / CLOSED — -239.1 m minimum physically explained.**
+   The exact original land-mask pixel is at **9.56427307378, -73.50892066956**,
+   tile **z13/x2423/y3877**, row 87, col 67 (MBTiles internal TMS y is
+   4314). The original Copernicus DEM cell
+   `Copernicus_DSM_COG_10_N09_00_W074_00_DEM` has a native sample of
+   **-240.72646 m**. The original rasterio bilinear warp gives
+   **-239.11595 m**, and the immutable Terrain-RGB decodes **-239.1 m**;
+   all original-land pixels on that tile match source rewarping to **<=0.05 m**.
+   The existing original OSMCoastline+Colombia R120027 mask independently
+   confirms all 65,536 pixels of that tile are valid country land.
+   In the 11x11 *source* pixel window the native Copernicus elevations are
+   continuously negative (**-240.7 to -132.4 m**; 121/121 source pixels
+   below sea level): a coherent excavated depression, not a PNG encoding glitch.
+
+   The exact low point is **~565 m from the OSM feature centroid** of
+   [Mina de carbón Pribbenow](https://mapcarta.com/W98642735), OSM way
+   **98642735**, `landuse=quarry`, operated by Drummond Ltd. The
+   [operator documents its open-pit Pribbenow/La Loma mine in Cesar](https://drummondltd.com/inventario-de-emisiones-de-gei-2025/).
+   A [2015 first-hand mine visit/interview](https://paisminero.com/index.php?Itemid=1203&catid=167&id=15179:pribbenow-la-mina&limitstart=1&option=com_content&view=article)
+   explicitly describes a production pit with levels **below sea level**
+   and references a working mine level around **-280 m**. The precise
+   individual pixel depth is NOT independently surveyed by these sources;
+   nevertheless the coherent original Copernicus source data, native
+   rewarp, OSM land mask, and known nearby deep open-pit excavation
+   explain the negative elevation. This is **not a generator bug** and
+   there is **no justification to force it to 0m or rerun the 26 shards**.
+
+   Evidence: [source-localizing GitHub Action #43691933777](https://github.com/ColombiaTransit/colombia-height/actions/runs/43691933777).
+   The immutable original draft Release additionally retains
+   `original-minimum-height-investigation.json` (exact coordinates,
+   nearest COG, source 11x11 patch stats, min 9x9 Terrain-RGB
+   neighbourhood, per-zoom negative statistics). The 4.16 GiB original
+   MBTiles SHA256 remained unchanged.
 4. This document records passing **automated** national checks, not human
    approval to publish. The draft and its three QA JSON reports remain
    unreleased pending human acceptance.

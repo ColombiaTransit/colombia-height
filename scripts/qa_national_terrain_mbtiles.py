@@ -23,6 +23,13 @@ from generate_osm_land_only_terrain import (
     classify_tile_osm_masks, load_osm_coastline_land, load_osm_country)
 from render_only_coast_rgb import COUNTRY_CLIP_MODE
 
+def json_numpy_scalar(value):
+    """Explicitly serialize NumPy scalar counters without hiding bad report types."""
+    if isinstance(value,np.generic):
+        return value.item()
+    raise TypeError(f"Unsupported QA report JSON type: {type(value).__name__}")
+
+
 SCALE = 100000  # Mapbox Terrain-RGB encoded integer at 0 m
 REGIONS = {
     "Bogota": (-74.0721, 4.7110),
@@ -150,7 +157,7 @@ def validate(mbtiles, plan_path, osm_land_clip, osm_land_meta, osm_country,
             # Negative coastal land can exist; do not invent a zero floor.
             height_min=min(height_min,float(onland.min()))
             height_max=max(height_max,float(onland.max()))
-            unique_heights_count+=onland.min()==onland.max()
+            unique_heights_count+=int(onland.min()==onland.max())
             per_zoom[z]+=1
             nland=int(land.sum())
             pixel_counts["land"]+=nland
@@ -279,7 +286,7 @@ def validate(mbtiles, plan_path, osm_land_clip, osm_land_meta, osm_country,
         ],
     }
     output.parent.mkdir(parents=True,exist_ok=True)
-    output.write_text(json.dumps(result,indent=2,sort_keys=True)+"\n")
+    output.write_text(json.dumps(result,indent=2,sort_keys=True,default=json_numpy_scalar)+"\n")
     print(json.dumps({k:v for k,v in result.items()
                       if k in ("status","native_tiles_checked","input_mbtiles_size_bytes",
                                "valid_original_OSM_Colombia_land_pixels",

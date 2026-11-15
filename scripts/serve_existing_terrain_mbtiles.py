@@ -16,13 +16,13 @@ from urllib.parse import urlsplit
 TILE_RE = re.compile(r"^/tiles/(\d+)/(\d+)/(\d+)\.png$")
 
 
-def serve(path, port, repo_root):
+def serve(path, port, repo_root, national_preview=False):
     path = Path(path).resolve()
     if not path.exists():
         raise FileNotFoundError(path)
     repo_root = Path(repo_root).resolve()
     files = {
-        "/": repo_root / "scripts" / "maplibre_coast_preview.html",
+        "/": repo_root / "scripts" / ("maplibre_national_preview.html" if national_preview else "maplibre_coast_preview.html"),
         "/maplibre-gl.mjs": repo_root / "node_modules" / "maplibre-gl" / "dist" / "maplibre-gl.mjs",
         "/maplibre-gl-worker.mjs": repo_root / "node_modules" / "maplibre-gl" / "dist" / "maplibre-gl-worker.mjs",
         "/maplibre-gl-shared.mjs": repo_root / "node_modules" / "maplibre-gl" / "dist" / "maplibre-gl-shared.mjs",
@@ -80,5 +80,7 @@ if __name__ == "__main__":
     parser.add_argument("--mbtiles", type=Path, required=True)
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--repo-root", type=Path, default=Path("."))
+    parser.add_argument("--national-preview",action="store_true",
+                        help="Serve the national multi-city QA map; old Cartagena pilot remains default")
     args = parser.parse_args()
-    serve(args.mbtiles, args.port, args.repo_root)
+    serve(args.mbtiles, args.port, args.repo_root, args.national_preview)

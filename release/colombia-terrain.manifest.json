@@ -1,0 +1,92 @@
+{
+  "schema": "colombiatransit-terrain-rgb-release-v1",
+  "dataset": "colombia-terrain",
+  "release_version": "v1.0.0",
+  "release_tag": "v1.0.0",
+  "release_date": "2026-11-15",
+  "status": "stable",
+  "repository": "https://github.com/ColombiaTransit/colombia-height",
+  "keywords": [
+    "Colombia",
+    "terrain-rgb",
+    "DEM",
+    "Copernicus GLO-30",
+    "OSM",
+    "MBTiles",
+    "raster-dem",
+    "TileServer GL",
+    "MapLibre",
+    "30m",
+    "z0-z13"
+  ],
+  "format": {
+    "container": "SQLite MBTiles",
+    "tile_format": "PNG",
+    "tile_resolution_px": 256,
+    "terrain_encoding": "Mapbox Terrain-RGB",
+    "zoom_min": 0,
+    "zoom_max": 13,
+    "tile_scheme": "XYZ for HTTP tile URLs; MBTiles storage is TMS",
+    "factual_land_mask_table": "osm_land_mask",
+    "factual_land_mask": "8-bit PNG grayscale; 255=OSM Colombian land, 0=outside scope"
+  },
+  "terrain_semantics": "Original Copernicus GLO-30 elevation on OSM physical Colombian land. Outside-Colombia land and ocean pixels are visual-only flat 0m, NOT measured land elevation or bathymetry.",
+  "source": {
+    "copernicus_COGs": 140,
+    "osm_land_source": "OSMCoastline physical land polygons",
+    "colombia_country_source": "OpenStreetMap relation 120027"
+  },
+  "native_tiles": 66607,
+  "candidate_tiles": 98904,
+  "merged_mbtiles_file": "colombia-terrain.mbtiles",
+  "merged_mbtiles_bytes": 4466196480,
+  "merged_mbtiles_sha256": "daa49c62e2c08b8922ca7f2c9f7575346b37cdcd4b1a84659f03d3d818377bdb",
+  "parts": [
+    {
+      "file": "colombia-terrain.mbtiles.part-000",
+      "bytes": 1610612736,
+      "sha256": "7d5a6b1ec19955fde1ee788524a1ff0b045832cdaea42472301c5bd798892efe",
+      "url": "https://github.com/ColombiaTransit/colombia-height/releases/download/v1.0.0/colombia-terrain.mbtiles.part-000"
+    },
+    {
+      "file": "colombia-terrain.mbtiles.part-001",
+      "bytes": 1610612736,
+      "sha256": "a4b63689ce973b0d3df8094963d8ebbd42a78aa40fbf7c95982cfbe2367d6ad5",
+      "url": "https://github.com/ColombiaTransit/colombia-height/releases/download/v1.0.0/colombia-terrain.mbtiles.part-001"
+    },
+    {
+      "file": "colombia-terrain.mbtiles.part-002",
+      "bytes": 1244971008,
+      "sha256": "df4e56d7807bb4c901b5171f9fc43af0b8b0be11fe32093c91037c73746b9999",
+      "url": "https://github.com/ColombiaTransit/colombia-height/releases/download/v1.0.0/colombia-terrain.mbtiles.part-002"
+    }
+  ],
+  "checksums_file": "https://github.com/ColombiaTransit/colombia-height/releases/download/v1.0.0/colombia-terrain.mbtiles.sha256",
+  "release_links": {
+    "versioned": "https://github.com/ColombiaTransit/colombia-height/releases/tag/v1.0.0",
+    "latest": "https://github.com/ColombiaTransit/colombia-height/releases/latest",
+    "latest_manifest": "https://github.com/ColombiaTransit/colombia-height/releases/latest/download/colombia-terrain.manifest.json",
+    "pinned_manifest": "https://github.com/ColombiaTransit/colombia-height/releases/download/v1.0.0/colombia-terrain.manifest.json"
+  },
+  "validation": {
+    "status": "PASS",
+    "qa_national_native_osm": "PASS",
+    "qa_tileservergl": "PASS",
+    "qa_maplibre_3d": "PASS 7/7",
+    "minimum_source": "-239.1m near Pribbenow open-pit mine, verified as original Copernicus input",
+    "report_assets": [
+      "national-full-pixel-mask-osm-qa.json",
+      "national-real-tileserver-gl-qa.json",
+      "national-maplibre-browser-qa.json",
+      "original-minimum-height-investigation.json"
+    ],
+    "source_evidence": "https://github.com/ColombiaTransit/colombia-height/blob/main/docs/national-terrain-QA-2026-11-15.md"
+  },
+  "license": {
+    "copernicus": "Copernicus WorldDEM-30 free license, mandatory derivative attribution",
+    "copernicus_license_url": "https://dataspace.copernicus.eu/explore-data/data-collections/copernicus-contributing-missions/collections-description/COP-DEM",
+    "copernicus_attribution": "produced using Copernicus WorldDEM-30 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved",
+    "osm": "© OpenStreetMap contributors; ODbL 1.0",
+    "osm_copyright_url": "https://www.openstreetmap.org/copyright"
+  }
+}

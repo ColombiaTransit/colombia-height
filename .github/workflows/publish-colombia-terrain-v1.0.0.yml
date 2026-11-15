@@ -1,0 +1,68 @@
+name: Publish Colombia Terrain-RGB v1.0.0
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/publish-colombia-terrain-v1.0.0.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      DRAFT_TAG: colombia-terrain-draft-2026-11-14
+      VERSION_TAG: v1.0.0
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate release manifest and existing draft before publishing
+        run: |
+          python -m unittest discover -s tests -p test_install_terrain_release.py -v
+          python -m json.tool release/colombia-terrain.manifest.json >/dev/null
+          test "$(gh release view "$DRAFT_TAG" --json isDraft --jq .isDraft)" = true
+          gh api "repos/$GITHUB_REPOSITORY/releases/445605263" >original-release.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('original-release.json').read_text())
+          m=json.loads(Path('release/colombia-terrain.manifest.json').read_text())
+          assert r['id']==445605263 and r['draft'] and r['tag_name']=='colombia-terrain-draft-2026-11-14'
+          a={x['name']:x for x in r['assets']}
+          assert m['release_version']=='v1.0.0'
+          assert m['merged_mbtiles_bytes']==4466196480
+          assert m['merged_mbtiles_sha256']=='daa49c62e2c08b8922ca7f2c9f7575346b37cdcd4b1a84659f03d3d818377bdb'
+          assert m['native_tiles']==66607
+          for part in m['parts']:
+              assert a[part['file']]['digest']=='sha256:'+part['sha256']
+              assert a[part['file']]['size']==part['bytes']
+          for name in ['national-full-pixel-mask-osm-qa.json','national-real-tileserver-gl-qa.json','national-maplibre-browser-qa.json','original-minimum-height-investigation.json']:
+              assert name in a
+          assert 'produced using Copernicus WorldDEM-30' in Path('release/DATA_LICENSE.md').read_text()
+          print('READY: original 4.16GiB MBTiles, QA evidence and required attribution verified.')
+          PY
+      - name: Add reusable manifest, data license and release notes to original draft
+        run: |
+          gh release upload "$DRAFT_TAG" release/colombia-terrain.manifest.json release/DATA_LICENSE.md release/RELEASE_NOTES.md
+      - name: Create fixed v1.0.0 git tag
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git tag -a "$VERSION_TAG" -m 'ColombiaTerrain v1.0.0 approved Terrain-RGB z0-13'
+          git push origin "refs/tags/$VERSION_TAG"
+      - name: Make approved original draft public as latest v1.0.0
+        run: |
+          gh release edit "$DRAFT_TAG" --tag "$VERSION_TAG" --verify-tag --draft=false --latest --title 'ColombiaTerrain v1.0.0 — GLO-30 Terrain-RGB z0–13' --notes-file release/RELEASE_NOTES.md
+      - name: Check release is public and latest
+        run: |
+          test "$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name)" = "$VERSION_TAG"
+          test "$(gh api "repos/$GITHUB_REPOSITORY/releases/445605263" --jq .draft)" = false
+          gh release view "$VERSION_TAG" --json url,isDraft,tagName --jq '{url,isDraft,tagName}'

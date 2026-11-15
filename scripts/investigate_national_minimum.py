@@ -16,7 +16,7 @@ import mercantile
 import numpy as np
 import rasterio
 from PIL import Image
-from pyproj import Transformer
+from rasterio.warp import transform
 from rasterio.windows import Window
 
 from generate_osm_land_only_terrain import (
@@ -26,8 +26,7 @@ from national_tile_plan import parse_manifest
 from two_cog_seam_pilot import warp_sources
 from render_only_coast_rgb import decode_mask_png
 
-WGS = Transformer.from_crs("EPSG:3857", "EPSG:4326", always_xy=True)
-THRESHOLDS = (-1, -10, -50, -100, -200)
+THRESHOLDS = (0, -1, -10, -50, -100, -200)
 EXPLICIT_OUTLIER_BELOW_M = -100.0
 
 
@@ -36,7 +35,8 @@ def lonlat(tile, row, col):
     b=mercantile.xy_bounds(x,y,z)
     east=b.left+(col+0.5)*(b.right-b.left)/256.
     north=b.top-(row+0.5)*(b.top-b.bottom)/256.
-    lon,lat=WGS.transform(east,north)
+    longitude,latitude=transform("EPSG:3857","EPSG:4326",[east],[north])
+    lon,lat=longitude[0],latitude[0]
     return [float(lon),float(lat)]
 
 
@@ -148,7 +148,7 @@ def investigate(mbtiles,manifest,osm_land,osm_meta,osm_country,cache,output):
             min_height=round(min_height_packed/10.-10000.,1)
             if z not in per_zoom_min or min_height<per_zoom_min[z]:
                 per_zoom_min[z]=min_height
-            nneg=int(np.count_nonzero(heights<threshold_values[-1]))
+            nneg=int(np.count_nonzero(heights<threshold_values[0]))
             negatives_by_zoom[z]+=nneg
             severe_by_zoom[z]+=int(np.count_nonzero(heights<threshold_values[-100]))
             if min_height<-10:

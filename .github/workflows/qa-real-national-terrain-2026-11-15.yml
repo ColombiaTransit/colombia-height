@@ -1,0 +1,136 @@
+name: NATIONAL Terrain-RGB Real Release QA — All Pixels, OSM and TileServer GL
+
+# One-time reproducible QA. Trigger only when this workflow file is created
+# or deliberately updated, not on arbitrary generator modifications.
+# Original published-status remains DRAFT. No Copernicus COG re-downloads.
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/qa-real-national-terrain-2026-11-15.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: colombia-height-national-DRAFT-real-product-qa
+  cancel-in-progress: false
+
+jobs:
+  real-country-qa:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    env:
+      GH_TOKEN: ${{ github.token }}
+      DRAFT_TAG: colombia-terrain-draft-2026-11-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Require actual 25 GiB free on runner for original 4.16 GiB immutable MBTiles
+        run: |
+          df -h .
+          python - <<'PY'
+          import shutil
+          free=shutil.disk_usage(".").free/1024**3
+          print(f"ACTUAL free GitHub runner space: {free:.2f} GiB")
+          if free<25: raise RuntimeError("Too little actual storage to safely reconstruct original national product")
+          PY
+      - name: Download ONLY final original draft MBTiles parts, SHA256, immutable tile plan and OSM provenance
+        run: |
+          set -euo pipefail
+          test "$(gh release view "$DRAFT_TAG" --json isDraft --jq .isDraft)" = true
+          mkdir -p output/qa-download output/qa-data output/qa-reports
+          gh release download "$DRAFT_TAG" --dir output/qa-download --pattern 'colombia-terrain.mbtiles.part-*'
+          gh release download "$DRAFT_TAG" --dir output/qa-download --pattern 'colombia-terrain.mbtiles.sha256'
+          gh release download "$DRAFT_TAG" --dir output/qa-download --pattern 'colombia-terrain-plan.tar.gz'
+          gh release download "$DRAFT_TAG" --dir output/qa-download --pattern 'colombia-terrain-inputs.tar.gz'
+          test "$(find output/qa-download -name 'colombia-terrain.mbtiles.part-*' -type f | wc -l)" -eq 3
+          cat output/qa-download/colombia-terrain.mbtiles.part-{000,001,002} >output/qa-data/colombia-terrain.mbtiles
+          (cd output/qa-data && sha256sum --check ../qa-download/colombia-terrain.mbtiles.sha256)
+          tar -xzf output/qa-download/colombia-terrain-plan.tar.gz -C output
+          tar -xzf output/qa-download/colombia-terrain-inputs.tar.gz -C output
+          cp deploy/tileserver-gl/config.json output/qa-data/config.json
+          test -f output/plan/plan.json
+          test -f output/osm-reference/osm-land-study.wkb.gz
+          test -f output/osm-country/colombia-relation-120027.json
+          echo 'RECONSTRUCTED original immutable 4.16 GiB MBTiles with verified SHA256; original source COGs NOT downloaded'
+      - name: Independent ALL stored national Terrain-RGB and OSM mask pixel QA, exact original OSM reference samples, and edge metrics
+        run: |
+          python -m pip install -r requirements-terrain.txt -r requirements-island-inventory.txt
+          python scripts/qa_national_terrain_mbtiles.py \
+            --mbtiles output/qa-data/colombia-terrain.mbtiles \
+            --plan output/plan/plan.json \
+            --osm-land-clip output/osm-reference/osm-land-study.wkb.gz \
+            --osm-land-meta output/osm-reference/osm-land-study-metadata.json \
+            --osm-country-geojson output/osm-country/colombia-relation-120027.json \
+            --output output/qa-reports/national-full-pixel-mask-osm-qa.json
+      - name: Boot REAL maptiler/tileserver-gl Docker against read-only nationwide MBTiles
+        run: |
+          docker run --detach --name colombia-national-terrain-qa \
+            -p 8080:8080 \
+            -v "$PWD/output/qa-data:/data:ro" \
+            maptiler/tileserver-gl:latest --config /data/config.json
+          for i in $(seq 1 60); do
+            if curl --silent --fail http://127.0.0.1:8080/health >/dev/null; then
+              echo 'Real TileServer GL national MBTiles is online'
+              break
+            fi
+            sleep 2
+          done
+          curl --fail --show-error http://127.0.0.1:8080/health
+      - name: 14 Zoom TileJSON, 204 offland and exact HTTP RGB elevation grid comparison against original national MBTiles
+        run: |
+          python scripts/qa_national_tileservergl.py \
+            --mbtiles output/qa-data/colombia-terrain.mbtiles \
+            --base-url http://127.0.0.1:8080 \
+            --output output/qa-reports/national-real-tileserver-gl-qa.json
+          (cd output/qa-data && sha256sum --check ../qa-download/colombia-terrain.mbtiles.sha256)
+      - name: Genuine MapLibre GL 6.8 and Chromium WebGL national 3D across Andes, Caribbean, Pacific, islands and Amazon
+        run: |
+          npm install --no-save maplibre-gl@6.8.0 playwright@1
+          npx playwright install --with-deps chromium
+          python scripts/serve_existing_terrain_mbtiles.py \
+            --mbtiles output/qa-data/colombia-terrain.mbtiles \
+            --repo-root . --port 8765 --national-preview \
+            >/tmp/colombia-national-maplibre-test-web.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8765/ >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:8765/ >/dev/null
+          TERRAIN_TEST_TILES_URL='http://127.0.0.1:8080/data/colombia-terrain/{z}/{x}/{y}.png' \
+            MAPLIBRE_NATIONAL_QA_DIR=output/qa-reports/browser \
+            node scripts/maplibre_national_browser_qa.js
+      - name: Save QA reports to the ORIGINAL UNPUBLISHED draft release — no publish or source regeneration
+        if: success()
+        run: |
+          test "$(gh release view "$DRAFT_TAG" --json isDraft --jq .isDraft)" = true
+          cp output/qa-reports/browser/maplibre-national-results.json \
+            output/qa-reports/national-maplibre-browser-qa.json
+          gh release upload "$DRAFT_TAG" \
+            output/qa-reports/national-full-pixel-mask-osm-qa.json \
+            output/qa-reports/national-real-tileserver-gl-qa.json \
+            output/qa-reports/national-maplibre-browser-qa.json
+          echo "NATIONAL REAL QA reports saved in unpublished draft; human visual release approval still required."
+      - name: Upload small factual QA JSON and original MapLibre screenshot evidence (never 4.16 GiB MBTiles)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: colombia-actual-countrywide-terrain-tile-server-maplibre-quality-report
+          path: |
+            output/qa-reports/**/*.json
+            output/qa-reports/*.json
+            output/qa-reports/browser/*.png
+          retention-days: 7
+          if-no-files-found: warn
+      - name: Show actual TileServer GL errors from Docker
+        if: always()
+        run: docker logs --tail 75 colombia-national-terrain-qa 2>/dev/null || true

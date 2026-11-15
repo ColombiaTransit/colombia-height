@@ -3,6 +3,11 @@
 // ONLY reads actual TileServer GL from existing, already-merged 4+ GiB MBTiles.
 const fs=require('fs');
 const {chromium}=require('playwright');
+const installedMaplibreVersion=JSON.parse(fs.readFileSync(
+  'node_modules/maplibre-gl/package.json','utf8')).version;
+if (!/^6\\.8\\./.test(installedMaplibreVersion)) {
+  throw new Error('Unexpected MapLibre package version: '+installedMaplibreVersion);
+}
 
 const out=process.env.MAPLIBRE_NATIONAL_QA_DIR||'output/national-browser-qa';
 const tilePattern=process.env.TERRAIN_TEST_TILES_URL||'http://127.0.0.1:8080/data/colombia-terrain/{z}/{x}/{y}.png';
@@ -48,7 +53,7 @@ const points=[
         detail=await page.evaluate(()=>{
           const map=window.__map;
           return {
-            maplibreVersion:window.maplibregl.version,
+            browserReportedMaplibreVersion:window.maplibregl.version || null,
             terrainReady:!!window.__terrainReady,
             terrainEnabled:!!map.getTerrain(),
             styleLoaded:map.isStyleLoaded(),
@@ -58,11 +63,14 @@ const points=[
         });
         const screenshot=out+'/'+location.name+'.png';
         await page.screenshot({path:screenshot,fullPage:true});
+        detail.installedMaplibreVersion=installedMaplibreVersion;
         detail.actualTileServerPNGResponses=pngs.length;
         detail.httpErrors=httpErrors;
         detail.javascriptErrors=errors;
         detail.pngExamples=pngs.slice(0,3);
-        detail.passed=detail.maplibreVersion.startsWith('6.8') &&
+        // ESM MapLibre 6.8 does not export a runtime version property.
+        // Verify the installed npm package version, not an undefined ESM API.
+        detail.passed=/^6\\.8\\./.test(installedMaplibreVersion) &&
           detail.terrainReady && detail.terrainEnabled &&
           detail.styleLoaded && pngs.length>0 &&
           !detail.runtimeErrors.length && !errors.length && !httpErrors.length;

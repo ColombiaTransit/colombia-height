@@ -1,0 +1,36 @@
+name: National Terrain QA — Offline Decoder and Validation Contract
+
+on:
+  push:
+    paths:
+      - 'scripts/qa_national_terrain_mbtiles.py'
+      - 'scripts/qa_national_tileservergl.py'
+      - 'scripts/maplibre_national_browser_qa.js'
+      - 'scripts/maplibre_national_preview.html'
+      - 'scripts/serve_existing_terrain_mbtiles.py'
+      - 'tests/test_qa_national_terrain_mbtiles.py'
+      - '.github/workflows/validate-national-terrain-qa.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  qa-geometry-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install original Terrain-RGB and OSM dependencies
+        run: python -m pip install -r requirements-terrain.txt -r requirements-island-inventory.txt
+      - name: Compile REAL nationwide QA and validate all-decoder contracts
+        run: |
+          python -m py_compile scripts/qa_national_terrain_mbtiles.py \
+            scripts/qa_national_tileservergl.py scripts/serve_existing_terrain_mbtiles.py
+          PYTHONPATH=scripts python -m unittest discover -s tests -p test_qa_national_terrain_mbtiles.py -v
+          node --check scripts/maplibre_national_browser_qa.js
+          python scripts/qa_national_terrain_mbtiles.py --help
+          python scripts/qa_national_tileservergl.py --help

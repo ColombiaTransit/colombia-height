@@ -101,10 +101,13 @@ artifact #14151544544](https://github.com/ColombiaTransit/colombia-height/action
    background**, not bathymetry, foreign measured terrain, or analytic data.
    The factual per-pixel Colombian land mask is available in the extra
    `osm_land_mask` SQLite table, not automatically exposed by TileServer GL.
-2. **Visible artificial national-border elevation steps** can occur, notably
-   near Leticia. These are inherent to the explicitly chosen country-clipped
-   flat-background policy, not a demonstrated native DEM seam. A map designer
-   should consider the visual appearance before a public release.
+2. **ACCEPTED / CLOSED — country-border background policy.** Visible
+   artificial national-border elevation steps can occur, notably near Leticia.
+   These follow the deliberately Colombia-only OSM/Geofabrik export footprint
+   and the intentionally flat 0m background outside scope. On 15 November
+   2026 the project owner explicitly accepted this display limitation as
+   **not a blocker**. Do not re-open the border-shape/source-selection research
+   and do not silently classify out-of-scope physical land as bathymetry.
 3. The **-239.1 m** observed minimum genuine-land pixel warrants a targeted
    independent geolocation/source sanity check if the dataset will be used
    for altitude analytics. Automated QA cannot identify its cause by minimum

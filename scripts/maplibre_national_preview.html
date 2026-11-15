@@ -54,10 +54,19 @@ map.on('load',()=>{
  map.setTerrain({source:'colombia-terrain',exaggeration:1});
  document.getElementById('status').textContent='3D enabled; waiting for REAL national TileServer GL PNGs';
 });
+// Source events can arrive before map.load; do not mark the 3-D terrain ready
+// until setTerrain has actually been called. Wait for the finished style.
 map.on('sourcedata',e=>{
- if(e.sourceId==='colombia-terrain' && e.isSourceLoaded){
+ if(e.sourceId==='colombia-terrain' && e.isSourceLoaded &&
+    map.getTerrain() && map.isStyleLoaded()){
   window.__terrainReady=true;
   document.getElementById('status').textContent='Real national terrain loaded; out-of-scope background is not factual elevation.';
+ }
+});
+map.on('idle',()=>{
+ if(map.getTerrain() && map.isStyleLoaded()){
+  window.__terrainReady=true;
+  document.getElementById('status').textContent='Real national terrain loaded; source idle and styles fully loaded.';
  }
 });
 </script>

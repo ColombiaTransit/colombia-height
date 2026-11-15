@@ -46,10 +46,14 @@ const points=[
         });
         await page.goto('http://127.0.0.1:8765/?'+params.toString(),
                         {waitUntil:'load',timeout:30000});
+        // A 'sourcedata/isSourceLoaded' event may fire BEFORE setTerrain,
+        // and a large 3D viewport can load 100+ PNGs. Require actual
+        // settled 3D style, not the early source event alone.
         await page.waitForFunction(()=>
-            window.__map && window.__map.getTerrain() && window.__terrainReady,
-            null,{timeout:35000});
-        await page.waitForTimeout(1700);
+            window.__map && window.__map.getTerrain() &&
+            window.__map.isStyleLoaded() && window.__terrainReady,
+            null,{timeout:90000});
+        await page.waitForTimeout(500);
         detail=await page.evaluate(()=>{
           const map=window.__map;
           return {
@@ -70,9 +74,16 @@ const points=[
         detail.pngExamples=pngs.slice(0,3);
         // ESM MapLibre 6.8 does not export a runtime version property.
         // Verify the installed npm package version, not an undefined ESM API.
+        const requireMountainHeight = ['Bogota-highland','Medellin-Andes'].includes(location.name);
+        detail.expectedNativePositiveMountainHeight = requireMountainHeight;
+        // Genuine OSM/native z13 center land heights from national factual
+        // audit: Bogotá 2538–2706m and Medellín 1451–1898m. If the map
+        // reports 0m here after settling, this is a real unresolved DEM issue.
         detail.passed=/^6\.8\./.test(installedMaplibreVersion) &&
           detail.terrainReady && detail.terrainEnabled &&
           detail.styleLoaded && pngs.length>0 &&
+          (detail.centerElevationM===null || Number.isFinite(detail.centerElevationM)) &&
+          (!requireMountainHeight || detail.centerElevationM>500) &&
           !detail.runtimeErrors.length && !errors.length && !httpErrors.length;
         if(!detail.passed) failed=true;
       }catch(e){

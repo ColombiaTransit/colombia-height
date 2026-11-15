@@ -1,0 +1,86 @@
+name: Colombia National Terrain — Investigate Original -239.1m Land Pixel
+
+# One-time, targeted investigation of the previously passed national draft.
+# Reuse the three immutable MBTiles parts, audited OSM physical-land reference,
+# and 140-source MANIFEST. Inspect ONE anomalous z13 native COG tile if needed.
+# DO NOT re-run the 32 shard generator, all COGs or national MapLibre QA.
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/investigate-minimum-height-2026-11-15.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: colombia-terrain-original-2026-11-14-minimum-land-height-qa
+  cancel-in-progress: false
+
+jobs:
+  locate-and-explain:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      GH_TOKEN: ${{ github.token }}
+      DRAFT_TAG: colombia-terrain-draft-2026-11-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Validate diagnostic Python and safe available storage
+        run: |
+          python -m py_compile scripts/investigate_national_minimum.py
+          python - <<'PY'
+          import shutil
+          free=shutil.disk_usage(".").free/1024**3
+          print(f"Available original GitHub runner space: {free:.2f} GiB")
+          if free < 25: raise RuntimeError("Insufficient original runner space; no experiment or new COG acquisition")
+          PY
+      - name: Reuse original already verified MBTiles draft parts, input manifest and original OSM polygons only
+        run: |
+          set -euo pipefail
+          test "$(gh release view "$DRAFT_TAG" --json isDraft --jq .isDraft)" = true
+          mkdir -p output/original-parts output/qa-data output/qa-source-cache output/reports
+          gh release download "$DRAFT_TAG" --dir output/original-parts --pattern 'colombia-terrain.mbtiles.part-*'
+          gh release download "$DRAFT_TAG" --dir output/original-parts --pattern 'colombia-terrain.mbtiles.sha256'
+          gh release download "$DRAFT_TAG" --dir output/original-parts --pattern 'colombia-terrain-inputs.tar.gz'
+          test "$(find output/original-parts -name 'colombia-terrain.mbtiles.part-*' -type f | wc -l)" -eq 3
+          cat output/original-parts/colombia-terrain.mbtiles.part-{000,001,002} >output/qa-data/colombia-terrain.mbtiles
+          (cd output/qa-data && sha256sum --check ../original-parts/colombia-terrain.mbtiles.sha256)
+          tar -xzf output/original-parts/colombia-terrain-inputs.tar.gz -C output
+          test -f output/stage140/colombia_dem_manifest_tumaco_staging_140.csv
+          test -f output/osm-reference/osm-land-study.wkb.gz
+          test -f output/osm-country/colombia-relation-120027.json
+          echo 'INPUTS VERIFIED: original 4.16GiB SHA256 + audited OSM physical land+country. All 26 original shards reused.'
+      - name: Find exact negative land pixel through original Terrain-RGB, independently verify original OSM physical land and selectively compare original COG source
+        run: |
+          python -m pip install -r requirements-terrain.txt -r requirements-island-inventory.txt
+          python scripts/investigate_national_minimum.py \
+            --mbtiles output/qa-data/colombia-terrain.mbtiles \
+            --manifest output/stage140/colombia_dem_manifest_tumaco_staging_140.csv \
+            --osm-land output/osm-reference/osm-land-study.wkb.gz \
+            --osm-meta output/osm-reference/osm-land-study-metadata.json \
+            --osm-country output/osm-country/colombia-relation-120027.json \
+            --cache output/qa-source-cache \
+            --output output/reports/original-minimum-height-investigation.json
+          python -m json.tool output/reports/original-minimum-height-investigation.json >/dev/null
+          (cd output/qa-data && sha256sum --check ../original-parts/colombia-terrain.mbtiles.sha256)
+      - name: Archive evidence in the SAME unpublished draft without changing original terrain
+        if: success()
+        run: |
+          test "$(gh release view "$DRAFT_TAG" --json isDraft --jq .isDraft)" = true
+          gh release upload "$DRAFT_TAG" \
+            output/reports/original-minimum-height-investigation.json
+          echo 'Exactly one original negative-height case investigated and recorded; no country-wide regeneration.'
+      - name: Preserve targeted investigation report even on QA discrepancies
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: original-colombia-minus239m-terrain-source-and-OSM-investigation
+          path: output/reports/*.json
+          retention-days: 7
+          if-no-files-found: warn

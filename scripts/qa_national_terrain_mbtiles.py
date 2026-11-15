@@ -150,7 +150,7 @@ def validate(mbtiles, plan_path, osm_land_clip, osm_land_meta, osm_country,
             # Negative coastal land can exist; do not invent a zero floor.
             height_min=min(height_min,float(onland.min()))
             height_max=max(height_max,float(onland.max()))
-            unique_heights_count+=len(np.unique(packed[land]))==1
+            unique_heights_count+=onland.min()==onland.max()
             per_zoom[z]+=1
             nland=int(land.sum())
             pixel_counts["land"]+=nland
@@ -172,6 +172,12 @@ def validate(mbtiles, plan_path, osm_land_clip, osm_land_meta, osm_country,
         _assert(set(per_zoom)==set(range(14)),f"Not every zoom 0-13 contains terrain: {dict(per_zoom)}")
         _assert(height_min>=-500 and height_max<=7000,
                 f"Unexpected native Colombian land height extent {height_min:.1f}..{height_max:.1f}m; investigate source, do not clip")
+        # Verify not just existing tiles: missing plan candidates must be
+        # real all-offland OSM candidates, never silently lost islands.
+        omitted_by_zoom=Counter(z for z,x,y in candidates)
+        omitted_reference_samples=[tile for tile in sorted(candidates)
+                                   if tile[0]<=8 or
+                                   ((tile[0]*2654435761 ^ tile[1]*2246822519 ^ tile[2]) % sample_modulus==0)]
         # Validate true physical OSM land from PREVIOUS immutable snapshot at samples.
         physical,osm_meta=load_osm_coastline_land(osm_land_clip,osm_land_meta)
         country=load_osm_country(osm_country)
@@ -186,6 +192,13 @@ def validate(mbtiles, plan_path, osm_land_clip, osm_land_meta, osm_country,
                                        "different_pixels":int(np.count_nonzero(source_mask!=mask))})
                 reference_count+=1
         _assert(not unexpected,f"Stored original OSM mask differs from expected physical land+R120027: {unexpected[:5]}")
+        incorrect_skips=[]
+        for tile in omitted_reference_samples:
+            source_mask,status,nland=classify_tile_osm_masks(tile,physical,country)
+            if nland:
+                incorrect_skips.append({"zxy":list(tile),"unpublished_real_OSM_land_pixels":nland})
+        _assert(not incorrect_skips,
+                f"Missing output tiles contain factual OSM Colombia land: {incorrect_skips[:10]}")
         _assert(osm_meta["reference_wkb_sha256"] and len(osm_meta["reference_wkb_sha256"])==64,
                 "Original OSM mask provenance absent")
         # Do not compare coarser and finer native elevations as equal: independent
@@ -245,6 +258,10 @@ def validate(mbtiles, plan_path, osm_land_clip, osm_land_meta, osm_country,
         "original_land_height_range_m":[height_min,height_max],
         "single_height_land_tiles":unique_heights_count,
         "original_reference_masks_independently_recomputed":reference_count,
+        "omitted_candidate_tiles":len(candidates),
+        "omitted_candidate_tiles_by_zoom":{str(z):omitted_by_zoom[z] for z in range(14)},
+        "omitted_candidate_tiles_checked_against_original_OSM":len(omitted_reference_samples),
+        "omitted_candidate_tiles_with_real_land_detected":len(incorrect_skips),
         "reference_mask_mismatch_tiles":len(unexpected),
         "reference_mask_mismatch_examples":unexpected[:20],
         "sampled_adjacent_land_edge_pairs":seam_pairs,

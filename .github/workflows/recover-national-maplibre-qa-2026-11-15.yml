@@ -39,6 +39,9 @@ jobs:
           node --check scripts/maplibre_national_browser_qa.js
           grep -Fq 'installedMaplibreVersion' scripts/maplibre_national_browser_qa.js
           grep -Fq 'browserReportedMaplibreVersion' scripts/maplibre_national_browser_qa.js
+          grep -Fq "map.on('idle'" scripts/maplibre_national_preview.html
+          grep -Fq "window.__map.isStyleLoaded()" scripts/maplibre_national_browser_qa.js
+          echo 'Race condition fixed: require real 3D terrain + idle style before querying elevation.'
           python - <<'PY'
           import shutil
           free=shutil.disk_usage(".").free/1024**3

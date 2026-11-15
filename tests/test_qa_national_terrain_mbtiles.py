@@ -1,11 +1,12 @@
 """Offline contract of national real-product QA decoders; no source downloads."""
 import io
+import json
 import unittest
 
 import numpy as np
 from PIL import Image
 
-from qa_national_terrain_mbtiles import unpack_png
+from qa_national_terrain_mbtiles import unpack_png, json_numpy_scalar
 from medellin_terrain import rgb_encode
 
 class NationalQADecodeTests(unittest.TestCase):
@@ -36,6 +37,17 @@ class NationalQADecodeTests(unittest.TestCase):
         mask[0,0]=42
         with self.assertRaisesRegex(AssertionError,"only 255 true"):
             unpack_png(*self.make_pngs(land,mask))
+
+    def test_actual_numpy_integer_metrics_are_serializable(self):
+        report={"single_height_land_tiles":np.int64(21),
+                "is_complete":np.bool_(True),
+                "max_elevation_m":np.float32(5400.1)}
+        parsed=json.loads(json.dumps(report,default=json_numpy_scalar))
+        self.assertEqual(parsed["single_height_land_tiles"],21)
+        self.assertIs(parsed["is_complete"],True)
+        self.assertAlmostEqual(parsed["max_elevation_m"],5400.1,places=2)
+        with self.assertRaises(TypeError):
+            json.dumps({"invalid":object()},default=json_numpy_scalar)
 
     def test_rgb_png_must_be_native_256(self):
         land=np.ones((256,256),bool)

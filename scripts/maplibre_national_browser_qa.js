@@ -5,7 +5,7 @@ const fs=require('fs');
 const {chromium}=require('playwright');
 const installedMaplibreVersion=JSON.parse(fs.readFileSync(
   'node_modules/maplibre-gl/package.json','utf8')).version;
-if (!/^6\\.8\\./.test(installedMaplibreVersion)) {
+if (!/^6\.8\./.test(installedMaplibreVersion)) {
   throw new Error('Unexpected MapLibre package version: '+installedMaplibreVersion);
 }
 
@@ -70,7 +70,7 @@ const points=[
         detail.pngExamples=pngs.slice(0,3);
         // ESM MapLibre 6.8 does not export a runtime version property.
         // Verify the installed npm package version, not an undefined ESM API.
-        detail.passed=/^6\\.8\\./.test(installedMaplibreVersion) &&
+        detail.passed=/^6\.8\./.test(installedMaplibreVersion) &&
           detail.terrainReady && detail.terrainEnabled &&
           detail.styleLoaded && pngs.length>0 &&
           !detail.runtimeErrors.length && !errors.length && !httpErrors.length;
